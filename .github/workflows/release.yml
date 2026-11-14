@@ -1,0 +1,195 @@
+name: Release
+
+# Pushing a new version (src-tauri/tauri.conf.json) to main publishes a release:
+# signed installer, .sig, latest.json for the in-app updater, and an iOS IPA.
+# Pushes without a version bump only run the check and stop.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      release: ${{ steps.version.outputs.release }}
+      notes: ${{ steps.version.outputs.notes }}
+      highlights: ${{ steps.version.outputs.highlights }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Refuse to ship an IPA/APK whose own version details disagree with the
+      # release version (they used to stay on the previous number).
+      - name: Verify version consistency
+        run: node scripts/version-check.mjs
+      - id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Only build when this version has no release yet: a plain push to main stays cheap.
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+          # Hand-written notes with screenshots (docs/releases/vX.Y.Z.md), if there are any.
+          {
+            echo "highlights<<EOF"
+            cat "docs/releases/v$version.md" 2>/dev/null && echo || true
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          # Changes since the previous release tag.
+          previous=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          range=${previous:+$previous..HEAD}
+          {
+            echo "notes<<EOF"
+            git log --no-merges --pretty='- %s' $range | grep -v '^- Merge' || true
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: check
+    if: needs.check.outputs.release == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          tagName: v__VERSION__
+          releaseName: narra-notch v__VERSION__
+          releaseDraft: false
+          prerelease: false
+          releaseBody: |
+            **Windows:** download `narra-notch_${{ needs.check.outputs.version }}_x64-setup.exe` below and run it. No admin rights or developer tools needed.
+            **iOS:** download `narra-notch_${{ needs.check.outputs.version }}_ios.ipa` below for sideloading. This IPA is unsigned.
+            **Android:** download `narra-notch_${{ needs.check.outputs.version }}_android.apk` below.
+            Already installed? The app offers this version under **Settings → General → Updates**.
+
+            Windows SmartScreen may warn because the installer is not code-signed yet: **More info → Run anyway**.
+
+            ${{ needs.check.outputs.highlights }}
+
+            ### Changes
+            ${{ needs.check.outputs.notes }}
+
+  build-ios:
+    needs: [check, build]
+    if: >-
+      always() && needs.check.result == 'success' &&
+      ((needs.check.outputs.release == 'true' && needs.build.result == 'success') ||
+      (github.event_name == 'workflow_dispatch' && needs.check.outputs.release == 'false'))
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync ios
+      - name: Build unsigned iOS archive
+        working-directory: ios/App
+        run: |
+          xcodebuild -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/App.xcarchive \
+            archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Package IPA
+        env:
+          VERSION: ${{ needs.check.outputs.version }}
+        working-directory: ios/App
+        run: |
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/App.app build/Payload/
+          cd build
+          zip -r "narra-notch_${VERSION}_ios.ipa" Payload
+      - name: Upload IPA to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: gh release upload "v${VERSION}" "ios/App/build/narra-notch_${VERSION}_ios.ipa" --repo "$GITHUB_REPOSITORY" --clobber
+
+  build-android:
+    needs: [check, build]
+    if: >-
+      always() && needs.check.result == 'success' &&
+      ((needs.check.outputs.release == 'true' && needs.build.result == 'success') ||
+      (github.event_name == 'workflow_dispatch' && needs.check.outputs.release == 'false'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Make gradlew executable
+        working-directory: android
+        run: chmod +x ./gradlew
+      - name: Setup Android signing keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "Decoding release keystore from GitHub Secrets..."
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          else
+            echo "::notice::ANDROID_KEYSTORE_BASE64 secret not found, build will fallback to debug signing so APK remains installable."
+          fi
+      - name: Build Android APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease
+      - name: Verify APK signature
+        run: |
+          apk_path=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Found APK at: $apk_path"
+          apksigner_bin=$(find "$ANDROID_HOME/build-tools" -name "apksigner" | sort -V | tail -n 1)
+          if [ -n "$apksigner_bin" ] && [ -x "$apksigner_bin" ]; then
+            echo "Verifying with $apksigner_bin..."
+            "$apksigner_bin" verify --verbose "$apk_path" || true
+          fi
+      - name: Package & Upload APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check.outputs.version }}
+        run: |
+          apk_path=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          target_name="narra-notch_${VERSION}_android.apk"
+          cp "$apk_path" "$target_name"
+          gh release upload "v${VERSION}" "$target_name" --repo "$GITHUB_REPOSITORY" --clobber

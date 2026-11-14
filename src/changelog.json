@@ -1,0 +1,22 @@
+[
+  {
+    "version": "2.2.0",
+    "date": "2026-11-14",
+    "items": [
+      {
+        "de": "Initialer Release: Narra-Notch Desktop Dynamic Island mit integriertem Coding Agent (Antigravity & OpenCode), synchronisierten Songtexten, Systemmonitoren und mobiler Companion-App",
+        "en": "Initial Release: Narra-Notch desktop dynamic island with integrated coding agent support (Antigravity & OpenCode), synchronized lyrics, system monitors, and mobile companion app",
+        "highlight": true
+      },
+      {
+        "de": "Dedizierte Chat-Karten: Eigene Schalter und Direktstart-Karten mit Chat-Bubble-Icons für Antigravity und OpenCode auf Desktop und Handy",
+        "en": "Dedicated Chat Cards: Independent toggles and quick-launch cards with chat bubble icons for Antigravity and OpenCode across desktop and mobile",
+        "highlight": true
+      },
+      {
+        "de": "Sichere LAN-Kopplung: Offene Hook-Verbindung für Agent-Aktionen und Live-Status, isolierter 8-stelliger Pairing-Code für OpenCode-Chat",
+        "en": "Secure LAN Pairing: Open hook connection for agent actions and live status, isolated 8-character pairing code for OpenCode chat"
+      }
+    ]
+  }
+]

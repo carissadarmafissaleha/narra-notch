@@ -1,0 +1,403 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter/opsz.css";
+@import "./tokens.css";
+
+/* Registered so the accent crossfades on track change instead of jumping. */
+@property --accent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #0a84ff;
+}
+[style*="--accent"] {
+  transition: --accent 500ms ease;
+}
+
+/* Theme tint (monochrome = white, color theme = chosen hue). Registered so switching
+   theme or color glides smoothly through every accent at once. */
+@property --tint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffffff;
+}
+[data-notch-root] {
+  transition:
+    --accent 500ms ease,
+    --tint 450ms var(--ease-out),
+    opacity 200ms ease;
+}
+
+/* Tab content enter: a soft lift + unblur, no hard cut. */
+@keyframes notch-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+.animate-rise {
+  animation: notch-rise 320ms var(--ease-out) both;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  /* The window is transparent; only the notch itself draws. */
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  /* ss03 = curly quotes, cv05 = l with a tail, both closer to SF Pro. */
+  font-feature-settings: "ss03", "cv05";
+  -webkit-font-smoothing: antialiased;
+  color: var(--color-label);
+  user-select: none;
+  cursor: default;
+}
+
+/* Numbers that change (times, timers, values) must not jump. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Settings pages scroll; a slim visible scrollbar makes it obvious that more
+   rows exist below (the notch has no room for a page footer). */
+.settings-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.22) transparent;
+  overscroll-behavior: contain;
+}
+.settings-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.settings-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.settings-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.22);
+}
+.settings-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(255 255 255 / 0.35);
+}
+
+/*
+ * Press feedback for everything clickable. Reacts instantly (scale on press),
+ * hover only with a real mouse.
+ */
+.pressable {
+  transition:
+    transform 140ms var(--ease-out),
+    background-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+.pressable:active {
+  transform: scale(0.94);
+}
+/* Wide surfaces (cards): 6 % would be a jolt at 500 px, so only press in slightly. */
+.pressable.pressable-wide:active {
+  transform: scale(0.985);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pressable-fill:hover {
+    background-color: var(--color-fill-2);
+  }
+}
+.pressable-fill:active {
+  background-color: var(--color-fill-3);
+}
+/* Privacy dot: soft glow while someone is speaking. */
+.privacy-dot[data-pulse] {
+  animation: privacy-pulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes privacy-pulse {
+  from {
+    box-shadow: 0 0 0 0 var(--dot);
+  }
+  to {
+    box-shadow: 0 0 6px 1px var(--dot);
+  }
+}
+
+/* Hardware history: the line glides left by one step over one second. */
+.trend-scroll {
+  animation: trend-scroll 1s linear forwards;
+}
+@keyframes trend-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--step)));
+  }
+}
+
+/* Marquee: smooth continuous scroll to the left */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 14s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* AGY CLI animated shimmering text effect */
+@keyframes agy-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-agy-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(255, 255, 255, 0.8) 25%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(255, 255, 255, 0.8) 75%,
+    rgba(255, 255, 255, 0.45) 100%
+  );
+  background-size: 200% 100%;
+  color: transparent !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  animation: agy-shimmer 2.2s linear infinite;
+  display: inline-block;
+}
+
+/* AGY CLI clean white glowing pulse */
+@keyframes agy-glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.6));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.95));
+    opacity: 1;
+  }
+}
+
+.animate-agy-glow {
+  animation: agy-glow-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .privacy-dot[data-pulse],
+  .trend-scroll,
+  .animate-marquee,
+  .animate-agy-shimmer,
+  .animate-agy-glow,
+  .animate-rise {
+    animation: none;
+  }
+}
+
+/*
+ * Mobile companion light mode.
+ *
+ * The phone shell was designed on pure black with white/zinc utilities. The
+ * desktop notch must stay black, so every override is scoped under
+ * `.mobile-light` (set on <html> and on the mobile root). Attribute selectors
+ * catch Tailwind's arbitrary opacity classes (`bg-white/[0.04]`, …) without
+ * listing every shade. Accent colors (sky/amber/emerald) stay meaningful.
+ */
+.mobile-light {
+  color-scheme: light;
+}
+
+/* Translucent white fills and borders become soft black ones. */
+/* Hover-only fills (icon buttons) must not paint a permanent chip. Listed first
+   so the base fill below still wins on elements that have both. */
+.mobile-light [class*="hover:bg-white/"] {
+  background-color: transparent;
+}
+.mobile-light [class*="bg-white/"] {
+  background-color: rgb(0 0 0 / 0.05);
+}
+.mobile-light [class*="border-white"] {
+  border-color: rgb(0 0 0 / 0.09);
+}
+
+/* A few selected/raised states need to stay visibly stronger than the base. */
+.mobile-light .bg-white\/10 {
+  background-color: rgb(0 0 0 / 0.09);
+}
+.mobile-light .bg-white\/15 {
+  background-color: rgb(0 0 0 / 0.13);
+}
+.mobile-light .bg-white\/20 {
+  background-color: rgb(0 0 0 / 0.17);
+}
+.mobile-light .border-white\/25 {
+  border-color: rgb(0 0 0 / 0.2);
+}
+.mobile-light .border-white\/30 {
+  border-color: rgb(0 0 0 / 0.24);
+}
+.mobile-light .border-white\/40 {
+  border-color: rgb(0 0 0 / 0.32);
+}
+
+/* Solid dark surfaces become white cards. */
+.mobile-light [class*="bg-[#1c1d25]"],
+.mobile-light [class*="bg-[#16171d]"],
+.mobile-light [class*="bg-[#101116]"],
+.mobile-light .bg-zinc-900 {
+  background-color: #ffffff;
+}
+.mobile-light .bg-zinc-800\/90 {
+  background-color: #e4e4e7;
+}
+.mobile-light .bg-zinc-800\/90:hover {
+  background-color: #d4d4d8;
+}
+
+/* Black translucent fills: cards/inputs get lighter, the modal backdrop stays dark. */
+.mobile-light .bg-black\/60 {
+  background-color: rgb(0 0 0 / 0.04);
+}
+.mobile-light .bg-black\/50 {
+  background-color: rgb(255 255 255 / 0.7);
+}
+.mobile-light .bg-black\/40,
+.mobile-light .bg-black\/30,
+.mobile-light .bg-black\/20 {
+  background-color: rgb(0 0 0 / 0.07);
+}
+.mobile-light .bg-black\/70 {
+  background-color: rgb(0 0 0 / 0.35);
+}
+
+/* Text ladder: white/zinc → the equivalent dark neutral. */
+.mobile-light [class*="text-white"] {
+  color: #18181b;
+}
+.mobile-light .text-zinc-100 {
+  color: #18181b;
+}
+.mobile-light .text-zinc-200 {
+  color: #27272a;
+}
+.mobile-light .text-zinc-300 {
+  color: #3f3f46;
+}
+.mobile-light .text-zinc-400 {
+  color: #52525b;
+}
+.mobile-light .text-zinc-500 {
+  color: #71717a;
+}
+.mobile-light [class*="text-zinc-500/"] {
+  color: rgb(113 113 122 / 0.8);
+}
+.mobile-light .text-zinc-600 {
+  color: #a1a1aa;
+}
+.mobile-light .placeholder-zinc-500::placeholder {
+  color: #71717a;
+}
+
+/* Accents need a darker shade to keep contrast on white. */
+.mobile-light .text-sky-400 {
+  color: #0284c7;
+}
+.mobile-light .text-amber-200 {
+  color: #92400e;
+}
+.mobile-light .text-amber-300 {
+  color: #b45309;
+}
+.mobile-light .text-amber-400 {
+  color: #d97706;
+}
+.mobile-light [class*="text-amber-400/"] {
+  color: rgb(217 119 6 / 0.9);
+}
+.mobile-light .text-emerald-300 {
+  color: #047857;
+}
+.mobile-light .text-emerald-400 {
+  color: #059669;
+}
+.mobile-light [class*="text-emerald-400/"] {
+  color: rgb(5 150 105 / 0.9);
+}
+.mobile-light [class*="text-emerald-500/"] {
+  color: rgb(5 150 105 / 0.6);
+}
+.mobile-light .text-cyan-400 {
+  color: #0891b2;
+}
+.mobile-light [class*="text-cyan-400/"] {
+  color: rgb(8 145 178 / 0.9);
+}
+.mobile-light .text-red-300 {
+  color: #b91c1c;
+}
+.mobile-light .text-red-400 {
+  color: #dc2626;
+}
+.mobile-light [class*="text-red-400/"] {
+  color: rgb(220 38 38 / 0.5);
+}
+.mobile-light [class*="text-red-500/"] {
+  color: rgb(220 38 38 / 0.6);
+}
+.mobile-light .text-amber-500 {
+  color: #b45309;
+}
+
+/* Primary white buttons (send / OK) become dark buttons with white glyphs. */
+.mobile-light .bg-white {
+  background-color: #18181b;
+}
+.mobile-light .bg-white.text-black {
+  color: #ffffff;
+}
+
+/* Light mode keeps Mochi clean: no blue halo around the canvas and no colored
+   aura blobs behind it (approval/finished/wardrobe). */
+.mobile-light .mochi-glow {
+  filter: none !important;
+}
+.mobile-light [class*="blur-3xl"] {
+  display: none;
+}
+
+/* Shimmer uses a white gradient; on white it would disappear. */
+.mobile-light .animate-agy-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.45) 0%,
+    rgb(0 0 0 / 0.75) 25%,
+    #000000 50%,
+    rgb(0 0 0 / 0.75) 75%,
+    rgb(0 0 0 / 0.45) 100%
+  );
+}
+
