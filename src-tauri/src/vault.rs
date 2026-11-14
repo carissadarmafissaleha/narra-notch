@@ -254,6 +254,44 @@ fn valid_pin(pin: &str) -> bool {
     pin.len() == 4 && pin.bytes().all(|b| b.is_ascii_digit())
 }
 
+const PIN_HASH_ROUNDS: u32 = 10_000;
+
+fn derive_pin_mac(salt: &[u8], pin: &str) -> String {
+    let mut current = pin.as_bytes().to_vec();
+    for round in 0..PIN_HASH_ROUNDS {
+        let mut mac = <Hmac<sha2::Sha256> as Mac>::new_from_slice(salt).expect("HMAC key");
+        mac.update(&current);
+        mac.update(&round.to_le_bytes());
+        current = mac.finalize().into_bytes().to_vec();
+    }
+    base64::engine::general_purpose::STANDARD_NO_PAD.encode(current)
+}
+
+fn hash_pin(pin: &str) -> String {
+    let salt = Aes256Gcm::generate_nonce(&mut OsRng);
+    let salt_b64 = base64::engine::general_purpose::STANDARD_NO_PAD.encode(salt);
+    let mac_b64 = derive_pin_mac(&salt, pin);
+    format!("v1:{salt_b64}:{mac_b64}")
+}
+
+/// Returns `(matched, needs_migration)`. Legacy 4-digit plaintext PINs still
+/// unlock and are transparently upgraded to `v1:<salt>:<mac>` on success.
+fn verify_pin(stored: &str, candidate: &str) -> (bool, bool) {
+    if let Some(rest) = stored.strip_prefix("v1:") {
+        let Some((salt_b64, expected_mac)) = rest.split_once(':') else {
+            return (false, false);
+        };
+        let Ok(salt) = base64::engine::general_purpose::STANDARD_NO_PAD.decode(salt_b64) else {
+            return (false, false);
+        };
+        let actual_mac = derive_pin_mac(&salt, candidate);
+        (constant_eq(expected_mac, &actual_mac), false)
+    } else {
+        let matched = constant_eq(stored, candidate);
+        (matched, matched)
+    }
+}
+
 // ---------- Commands ----------
 
 #[derive(Serialize)]
@@ -316,7 +354,7 @@ pub fn vault_setup(pin: String, app: AppHandle, state: State<'_, VaultState>) ->
     if data.pin.is_some() {
         return Err("pin-exists".into());
     }
-    data.pin = Some(pin);
+    data.pin = Some(hash_pin(&pin));
     save(&app, &data)?;
     *state.unlocked_until.lock().unwrap() = Some(Instant::now() + UNLOCK_IDLE);
     Ok(())
@@ -335,9 +373,13 @@ pub fn vault_unlock(pin: String, app: AppHandle, state: State<'_, VaultState>) -
         return Err(format!("lockout:{}", data.locked_until - now));
     }
     let Some(stored) = data.pin.as_deref() else { return Err("no-pin".into()) };
-    if constant_eq(stored, &pin) {
-        if data.fails != 0 {
+    let (matched, migrate) = verify_pin(stored, &pin);
+    if matched {
+        if data.fails != 0 || migrate {
             data.fails = 0;
+            if migrate {
+                data.pin = Some(hash_pin(&pin));
+            }
             save(&app, &data)?;
         }
         *state.unlocked_until.lock().unwrap() = Some(Instant::now() + UNLOCK_IDLE);
@@ -524,7 +566,7 @@ pub fn vault_change_pin(pin: String, app: AppHandle, state: State<'_, VaultState
     }
     require(&state, true)?;
     let mut data = load(&app)?;
-    data.pin = Some(pin);
+    data.pin = Some(hash_pin(&pin));
     save(&app, &data)
 }
 
@@ -971,5 +1013,17 @@ mod tests {
         assert!(parse_otpauth("otpauth://hotp/x?secret=HXDMVJECJJWSRB3H").is_none());
         assert!(parse_input("jbsw y3dp ehpk 3pxp").is_ok());
         assert!(parse_input("not a key!").is_err());
+    }
+
+    #[test]
+    fn pin_hash_and_legacy_migration() {
+        let hashed = hash_pin("1234");
+        assert!(hashed.starts_with("v1:"));
+        assert!(!hashed.contains("1234"));
+        assert_eq!(verify_pin(&hashed, "1234"), (true, false));
+        assert_eq!(verify_pin(&hashed, "0000"), (false, false));
+        // Legacy plaintext 4-digit PIN still verifies and signals migration:
+        assert_eq!(verify_pin("1234", "1234"), (true, true));
+        assert_eq!(verify_pin("1234", "9999"), (false, false));
     }
 }

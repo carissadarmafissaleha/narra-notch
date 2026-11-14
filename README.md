@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v2.2.0-111?style=flat-square" alt="Version 2.2.0" />
+  <img src="https://img.shields.io/badge/version-v2.2.1-111?style=flat-square" alt="Version 2.2.1" />
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-111?style=flat-square" alt="Windows 10 and 11" />
   <img src="https://img.shields.io/badge/iOS-IPA-111?style=flat-square" alt="iOS Sideload IPA" />
   <img src="https://img.shields.io/badge/Android-APK-111?style=flat-square" alt="Android APK" />
@@ -117,7 +117,7 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 - **Notification Sounds & Haptics**: Full audio and vibration alerts on both iOS and Android when an agent requires approval or finishes its task.
 - **Real-Time Synchronized Outfits**: Mochi's wardrobe updates live across desktop and mobile companion.
 - **Dark & Light Mode**: A sun/moon switch in the companion header; the choice is remembered. The Windows notch stays pure black.
-- **Dedicated Interactive Chat Tabs**: Clean tab navigation between `[ Overview ]`, `[ Chat ]`, and `[ Diff ]`.
+- **Dedicated Mobile Dock Navigation**: Fluid bottom dock with spring-animated active pill indicator (`Terminal` → `Diff` → `Antigravity` → `OpenCode`), auto-resizing smoothly when chat tabs are toggled.
 - **Full Touch Gestures & PWA Caching**: Viewport-locked momentum scrolling, real-time Server-Sent Events (SSE), and audio notifications.
 
 <table align="center">
@@ -132,14 +132,20 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
     <td><img src="docs/media/pwa-03-approval.png" alt="PWA Tool Approval Dialog" width="260" /></td>
   </tr>
   <tr>
-    <td align="center"><b>Interactive Chat & Models</b></td>
+    <td align="center"><b>Antigravity Chat</b></td>
+    <td align="center"><b>OpenCode Sessions</b></td>
     <td align="center"><b>Live Code Diff</b></td>
-    <td align="center"><b>Wardrobe Outfits</b></td>
   </tr>
   <tr>
     <td><img src="docs/media/pwa-04-chat.png" alt="PWA Interactive Chat" width="260" /></td>
+    <td><img src="docs/media/pwa-07-opencode.png" alt="PWA OpenCode Session" width="260" /></td>
     <td><img src="docs/media/pwa-05-diff.png" alt="PWA Live Code Diff" width="260" /></td>
-    <td><img src="docs/media/pwa-06-wardrobe.png" alt="PWA Wardrobe Outfits" width="260" /></td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center"><b>Settings & Wardrobe Outfits</b></td>
+  </tr>
+  <tr>
+    <td colspan="3" align="center"><img src="docs/media/pwa-06-wardrobe.png" alt="PWA Wardrobe Outfits" width="360" /></td>
   </tr>
 </table>
 

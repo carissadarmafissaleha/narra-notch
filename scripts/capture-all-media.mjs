@@ -2,21 +2,32 @@
 // Usage: npm run build && node scripts/capture-all-media.mjs
 import puppeteer from "puppeteer-core";
 import { preview } from "vite";
-import { existsSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, readdirSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 
 const EDGE_PATH = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
 const OUT_DIR = resolve("docs/media");
 
-if (!existsSync(OUT_DIR)) mkdirSync(OUT_DIR, { recursive: true });
+if (!existsSync(OUT_DIR)) {
+  mkdirSync(OUT_DIR, { recursive: true });
+} else {
+  // Clear all old screenshot pngs before capturing new ones
+  for (const file of readdirSync(OUT_DIR)) {
+    if (file.endsWith(".png")) {
+      try {
+        unlinkSync(resolve(OUT_DIR, file));
+      } catch {}
+    }
+  }
+}
 
 const DESKTOP = { width: 960, height: 680, deviceScaleFactor: 2 };
 const IPHONE = { width: 390, height: 844, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 
-const D = "showcase&bg=white&lang=id";
+const D = "showcase&lang=en";
 
 const SHOTS = [
   // ── Closed notch ──
@@ -54,12 +65,13 @@ const SHOTS = [
   { name: "30-coding-agent-wardrobe.png", query: `${D}&tab=agent&agentSubTab=wardrobe` },
   { name: "31-closed-agent-working.png", query: `${D}&closed=1&agentStatus=working` },
   // ── iPhone PWA companion ──
-  { name: "pwa-01-idle.png", query: "mobile&showcase&lang=id", viewport: IPHONE },
-  { name: "pwa-02-working.png", query: "mobile&showcase&lang=id&agentStatus=working", viewport: IPHONE },
-  { name: "pwa-03-approval.png", query: "mobile&showcase&lang=id&agentStatus=approval", viewport: IPHONE },
-  { name: "pwa-04-chat.png", query: "mobile&showcase&lang=id", viewport: IPHONE, click: "Chat" },
-  { name: "pwa-05-diff.png", query: "mobile&showcase&lang=id&agentStatus=working", viewport: IPHONE, click: "Diff" },
-  { name: "pwa-06-wardrobe.png", query: "mobile&showcase&lang=id", viewport: IPHONE, clickTitle: "Koleksi Pakaian" },
+  { name: "pwa-01-idle.png", query: "mobile&showcase&lang=en", viewport: IPHONE },
+  { name: "pwa-02-working.png", query: "mobile&showcase&lang=en&agentStatus=working", viewport: IPHONE },
+  { name: "pwa-03-approval.png", query: "mobile&showcase&lang=en&agentStatus=approval", viewport: IPHONE },
+  { name: "pwa-04-chat.png", query: "mobile&showcase&lang=en&mobileTab=chat", viewport: IPHONE },
+  { name: "pwa-05-diff.png", query: "mobile&showcase&lang=en&agentStatus=working&mobileTab=diff", viewport: IPHONE },
+  { name: "pwa-06-wardrobe.png", query: "mobile&showcase&lang=en&mobileSettings=1", viewport: IPHONE },
+  { name: "pwa-07-opencode.png", query: "mobile&showcase&lang=en&mobileTab=opencode", viewport: IPHONE },
 ];
 
 async function clickButton(page, { text, title }) {

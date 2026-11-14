@@ -126,6 +126,21 @@ if (isNative) {
         : { ...cur, codingAgent: { ...cur.codingAgent, mochiOutfit: outfit } },
     );
   });
+
+  void listen<{ turbo?: boolean; askPermissions?: boolean }>("settings://companion_turbo", (event) => {
+    const ask =
+      typeof event.payload?.askPermissions === "boolean"
+        ? event.payload.askPermissions
+        : typeof event.payload?.turbo === "boolean"
+          ? !event.payload.turbo
+          : undefined;
+    if (typeof ask !== "boolean") return;
+    updateSettings((cur) =>
+      (cur.codingAgent?.askPermissions ?? true) === ask
+        ? cur
+        : { ...cur, codingAgent: { ...cur.codingAgent, askPermissions: ask } },
+    );
+  });
 }
 
 // OpenCode approvals: the plugin injects session `ask` rules only while this is

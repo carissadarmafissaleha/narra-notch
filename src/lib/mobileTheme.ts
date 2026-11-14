@@ -6,19 +6,31 @@
  * companion is a separate install and has no Settings page of its own yet.
  */
 
-export type MobileTheme = "dark" | "light";
+export type MobileTheme = "dark" | "light" | "auto";
 
 const STORAGE_KEY = "notch:mobile-theme";
-const LIGHT_BG = "#f2f2f7";
+const LIGHT_BG = "#EEF1F8";
 const DARK_BG = "#000000";
 
 /** Saved choice, or dark (the original look) on first open. */
 export function getMobileTheme(): MobileTheme {
   try {
-    return localStorage.getItem(STORAGE_KEY) === "light" ? "light" : "dark";
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw === "light" || raw === "dark" || raw === "auto") return raw;
+    return "dark";
   } catch {
     return "dark";
   }
+}
+
+export function resolveMobileTheme(theme: MobileTheme): "light" | "dark" {
+  if (theme === "auto") {
+    if (typeof window !== "undefined" && window.matchMedia) {
+      return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    return "dark";
+  }
+  return theme;
 }
 
 export function saveMobileTheme(theme: MobileTheme) {
@@ -35,7 +47,8 @@ export function saveMobileTheme(theme: MobileTheme) {
  * scoped under `.mobile-light` in global.css.
  */
 export function applyMobileTheme(theme: MobileTheme) {
-  const light = theme === "light";
+  const resolved = resolveMobileTheme(theme);
+  const light = resolved === "light";
   const color = light ? LIGHT_BG : DARK_BG;
 
   document.documentElement.classList.toggle("mobile-light", light);

@@ -99,10 +99,13 @@ pub fn get_companion_outfit() -> Option<String> {
 /// Settings payload shared by `/api/settings` and the SSE `init` frame. The
 /// outfit is only included once the desktop has reported one.
 fn companion_settings() -> serde_json::Value {
+    let ask = crate::agent::ask_permissions();
     let mut map = serde_json::Map::new();
     map.insert("language".to_string(), json!(get_companion_language()));
     map.insert("chatEnabled".to_string(), json!(get_companion_chat_enabled()));
     map.insert("opencodeChatEnabled".to_string(), json!(get_companion_opencode_chat_enabled()));
+    map.insert("askPermissions".to_string(), json!(ask));
+    map.insert("turbo".to_string(), json!(!ask));
     if let Some(outfit) = get_companion_outfit() {
         map.insert("outfit".to_string(), json!(outfit));
     }
@@ -306,6 +309,50 @@ fn body_of(raw_req: &str) -> &str {
     }
 }
 
+/// Extract a header value (case-insensitive) from the HTTP request head.
+fn header_value<'a>(raw_req: &'a str, key: &str) -> Option<&'a str> {
+    raw_req
+        .lines()
+        .take_while(|line| !line.trim().is_empty())
+        .find_map(|line| {
+            let (name, value) = line.split_once(':')?;
+            name.trim()
+                .eq_ignore_ascii_case(key)
+                .then(|| value.trim())
+        })
+}
+
+/// Reject cross-origin requests from external websites on the internet while
+/// allowing Capacitor shells (`capacitor://localhost`, `http://localhost`),
+/// local dev/Tauri views, and private LAN PWA origins.
+fn is_allowed_origin(origin: Option<&str>) -> bool {
+    let Some(origin) = origin.map(str::trim).filter(|o| !o.is_empty()) else {
+        return true;
+    };
+    let lower = origin.to_ascii_lowercase();
+    if lower == "capacitor://localhost"
+        || lower == "tauri://localhost"
+        || lower == "http://tauri.localhost"
+        || lower == "https://tauri.localhost"
+        || lower == "http://localhost"
+        || lower == "https://localhost"
+        || lower.starts_with("http://localhost:")
+        || lower.starts_with("https://localhost:")
+        || lower == "http://127.0.0.1"
+        || lower.starts_with("http://127.0.0.1:")
+    {
+        return true;
+    }
+    if let Some(rest) = lower.strip_prefix("http://") {
+        let host = rest.split('/').next().unwrap_or(rest);
+        let host = host.split(':').next().unwrap_or(host);
+        if let Ok(ip) = host.parse::<std::net::Ipv4Addr>() {
+            return ip.is_private() || ip.is_loopback() || ip.is_link_local();
+        }
+    }
+    false
+}
+
 /// `?key=value` from the raw request target, percent-decoded.
 fn query_param(raw_uri: &str, key: &str) -> Option<String> {
     let query = raw_uri.split_once('?')?.1;
@@ -383,6 +430,22 @@ async fn handle_connection(
     let raw_uri = parts[1];
     let uri = raw_uri.split('?').next().unwrap_or(raw_uri);
 
+    let origin = header_value(&raw_req, "origin");
+    if !is_allowed_origin(origin) {
+        let body = json!({ "error": "forbidden_origin" }).to_string();
+        let resp = format!(
+            "HTTP/1.1 403 Forbidden\r\n\
+             Content-Type: application/json; charset=utf-8\r\n\
+             Content-Length: {}\r\n\
+             Connection: close\r\n\r\n{}",
+            body.len(),
+            body
+        );
+        stream.write_all(resp.as_bytes()).await?;
+        stream.flush().await?;
+        return Ok(());
+    }
+
     if method == "OPTIONS" {
         let resp = "HTTP/1.1 204 No Content\r\n\
                     Access-Control-Allow-Origin: *\r\n\
@@ -394,43 +457,47 @@ async fn handle_connection(
         return Ok(());
     }
 
-    // Pairing gate: once the desktop created a code, calls to OpenCode API must carry it
-    // (header, or `?t=`). The companion hook connection (status, events, approvals, diffs)
-    // stays open so the phone can track agent progress without chat pairing.
-    if uri.starts_with("/api/opencode/") {
-        let header_token = raw_req
-            .lines()
-            .take_while(|line| !line.trim().is_empty())
-            .find_map(|line| {
-                let (name, value) = line.split_once(':')?;
-                name.trim()
-                    .eq_ignore_ascii_case("x-narra-token")
-                    .then(|| value.trim().to_string())
-            })
-            .unwrap_or_default();
-        let query_token = raw_uri
-            .split_once('?')
-            .and_then(|(_, query)| query.split('&').find_map(|pair| pair.strip_prefix("t=")))
-            .unwrap_or("");
-        let provided = if header_token.is_empty() {
-            query_token
-        } else {
-            header_token.as_str()
-        };
+    let header_token = header_value(&raw_req, "x-narra-token").unwrap_or("");
+    let query_token = raw_uri
+        .split_once('?')
+        .and_then(|(_, query)| query.split('&').find_map(|pair| pair.strip_prefix("t=")))
+        .unwrap_or("");
+    let provided_token = if header_token.is_empty() {
+        query_token
+    } else {
+        header_token
+    };
 
-        if !companion_auth::authorized(provided) {
-            let body = json!({ "error": "unauthorized" }).to_string();
-            let resp = format!(
-                "HTTP/1.1 401 Unauthorized\r\n\
-                 Content-Type: application/json; charset=utf-8\r\n\
-                 Content-Length: {}\r\n\
-                 Access-Control-Allow-Origin: *\r\n\
-                 Connection: close\r\n\r\n{}",
-                body.len(),
-                body
-            );
-            stream.write_all(resp.as_bytes()).await?;
-            stream.flush().await?;
+    // Antigravity chat routes (/api/chat, /api/upload, /api/history*) are only
+    // reachable while the desktop explicitly enabled Antigravity Chat,
+    // and /api/chat requires Antigravity to be connected / running.
+    if uri == "/api/chat"
+        || uri == "/api/upload"
+        || uri == "/api/history"
+        || uri.starts_with("/api/history/")
+    {
+        if !get_companion_chat_enabled() {
+            write_json(&mut stream, "403 Forbidden", &json!({ "error": "chat_disabled" })).await?;
+            return Ok(());
+        }
+        if uri == "/api/chat" && !crate::agent::is_hook_installed_internal() {
+            write_json(&mut stream, "503 Service Unavailable", &json!({ "error": "antigravity_not_connected" })).await?;
+            return Ok(());
+        }
+    }
+
+    // Pairing gate: once the desktop created a code, calls to chat & sensitive actions
+    // (OpenCode, Antigravity Chat/Upload/History, and approval responses) must carry it.
+    // The companion hook connection (status, events, diffs) stays open for live observation.
+    if uri.starts_with("/api/opencode/")
+        || uri == "/api/chat"
+        || uri == "/api/upload"
+        || uri == "/api/history"
+        || uri.starts_with("/api/history/")
+        || uri == "/api/respond"
+    {
+        if !companion_auth::authorized(provided_token) {
+            write_json(&mut stream, "401 Unauthorized", &json!({ "error": "unauthorized" })).await?;
             return Ok(());
         }
     }
@@ -490,12 +557,22 @@ async fn handle_connection(
             if let Some(lang) = val.get("language").and_then(|v| v.as_str()) {
                 set_companion_language(lang);
             }
-            if let Some(chat) = val.get("chatEnabled").and_then(|v| v.as_bool()) {
-                set_companion_chat_enabled(chat);
+            if let Some(turbo) = val.get("turbo").and_then(|v| v.as_bool()) {
+                let ask = !turbo;
+                crate::agent::apply_ask_permissions(ask, &app);
+                let _ = app.emit(
+                    "settings://companion_turbo",
+                    json!({ "turbo": turbo, "askPermissions": ask }),
+                );
+            } else if let Some(ask) = val.get("askPermissions").and_then(|v| v.as_bool()) {
+                crate::agent::apply_ask_permissions(ask, &app);
+                let _ = app.emit(
+                    "settings://companion_turbo",
+                    json!({ "turbo": !ask, "askPermissions": ask }),
+                );
             }
-            if let Some(opencode_chat) = val.get("opencodeChatEnabled").and_then(|v| v.as_bool()) {
-                set_companion_opencode_chat_enabled(opencode_chat);
-            }
+            // Note: `chatEnabled` and `opencodeChatEnabled` are owned exclusively
+            // by the desktop settings via Tauri IPC and cannot be toggled remotely.
         }
         let mut body_val = companion_settings();
         if let Some(obj) = body_val.as_object_mut() {
@@ -624,11 +701,15 @@ async fn handle_connection(
         stream.flush().await?;
 
         let state = app.state::<AgentState>();
+        let ask = crate::agent::ask_permissions();
         let mut init_msg = json!({
             "type": "init",
             "state": agent::get_state_view(&state),
             "language": get_companion_language(),
             "chatEnabled": get_companion_chat_enabled(),
+            "opencodeChatEnabled": get_companion_opencode_chat_enabled(),
+            "askPermissions": ask,
+            "turbo": !ask,
         });
         if let Some(outfit) = get_companion_outfit() {
             init_msg["outfit"] = json!(outfit);
@@ -1257,5 +1338,19 @@ mod tests {
         let request = "POST / HTTP/1.1\r\nContent-Length: 2\r\n\r\n{}";
         assert_eq!(body_of(request), "{}");
         assert_eq!(body_of("GET / HTTP/1.1\r\n\r\n"), "");
+    }
+
+    #[test]
+    fn origin_allowlist_blocks_external_websites() {
+        assert!(is_allowed_origin(None));
+        assert!(is_allowed_origin(Some("capacitor://localhost")));
+        assert!(is_allowed_origin(Some("http://localhost")));
+        assert!(is_allowed_origin(Some("https://localhost")));
+        assert!(is_allowed_origin(Some("http://localhost:1420")));
+        assert!(is_allowed_origin(Some("http://127.0.0.1:1421")));
+        assert!(is_allowed_origin(Some("http://192.168.1.42:1421")));
+        assert!(is_allowed_origin(Some("http://10.0.0.5:1421")));
+        assert!(!is_allowed_origin(Some("https://evil.example.com")));
+        assert!(!is_allowed_origin(Some("http://8.8.8.8:1421")));
     }
 }

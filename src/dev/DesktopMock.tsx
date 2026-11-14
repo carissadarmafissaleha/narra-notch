@@ -23,11 +23,11 @@ export function DesktopMock() {
     <div
       className="fixed inset-0"
       style={{
-        // Showcase: brighter at the top so the black notch reads clearly in captures, or white if ?bg=white.
+        // Showcase: sleek dark wallpaper gradient with subtle upper illumination so the black notch silhouette pops.
         background: isWhiteBg
           ? "#ffffff"
           : showcase
-          ? "radial-gradient(60% 55% at 50% 0%, #6d8cff 0%, rgb(109 140 255 / 0) 72%), radial-gradient(70% 70% at 88% 105%, #8a4dff 0%, rgb(138 77 255 / 0) 62%), linear-gradient(180deg, #2a3c9e 0%, #121a5c 55%, #080c2a 100%)"
+          ? "radial-gradient(80% 55% at 50% -5%, #222d4c 0%, rgb(34 45 76 / 0) 75%), radial-gradient(70% 65% at 85% 95%, #1d1536 0%, rgb(29 21 54 / 0) 65%), radial-gradient(60% 60% at 15% 95%, #12203b 0%, rgb(18 32 59 / 0) 65%), linear-gradient(180deg, #0e1322 0%, #070a13 50%, #030408 100%)"
           : light
           ? "radial-gradient(120% 90% at 70% 110%, #9fc3ff 0%, #dbe7ff 45%, #f3f6fb 80%)"
           : "radial-gradient(90% 70% at 60% 115%, #3c7bff 0%, #1d3fa6 30%, #0b1a4a 60%, #050a1c 100%)",
@@ -67,7 +67,10 @@ export function DesktopMock() {
       {!isWhiteBg && (
         <div
           className="fixed inset-x-0 bottom-0 h-12 backdrop-blur-xl"
-          style={{ background: light ? "rgb(243 243 243 / 0.8)" : "rgb(28 28 28 / 0.8)" }}
+          style={{
+            background: light ? "rgb(243 243 243 / 0.8)" : "rgb(12 15 24 / 0.82)",
+            borderTop: "1px solid rgba(255, 255, 255, 0.07)",
+          }}
         >
           {showcase && <WindowsLogo />}
         </div>

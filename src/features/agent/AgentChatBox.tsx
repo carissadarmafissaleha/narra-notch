@@ -15,9 +15,12 @@ import {
   ArrowsOutSimple,
   ArrowsInSimple,
   ChatCircleDots,
+  FolderSimple,
 } from "@phosphor-icons/react";
 import {
   agentChatStore,
+  agentStore,
+  toggleHooks,
   sendAgentChat,
   loadConversation,
   deleteConversation,
@@ -36,12 +39,14 @@ export interface AgentChatBoxProps {
   fillHeight?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  mobile?: boolean;
 }
 
 export function AgentChatBox({
   fillHeight = false,
   isExpanded = false,
   onToggleExpand,
+  mobile = false,
 }: AgentChatBoxProps = {}) {
   const chat = agentChatStore.use();
   const [draft, setDraft] = useState("");
@@ -52,6 +57,7 @@ export function AgentChatBox({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  const isHookInstalled = Boolean(agentStore.use().isHookInstalled);
   const {
     selectedModel,
     availableModels,
@@ -178,6 +184,124 @@ export function AgentChatBox({
       }`}
     >
       {/* ── TOP ACTION BAR: Model Pill, History Button, New Chat, Expand ── */}
+      {mobile ? (
+        <div className="flex flex-col gap-2 pb-2 shrink-0">
+          <div className="ca-rw">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                className="ca-chip"
+                title={t("Pilih model Antigravity")}
+              >
+                {selectedModel.includes("flash") ? (
+                  <Lightning size={16} weight="bold" style={{ color: "var(--ac)" }} />
+                ) : (
+                  <Brain size={16} weight="bold" style={{ color: "var(--ac)" }} />
+                )}
+                <span className="truncate max-w-[200px]">{currentModelLabel}</span>
+                <CaretDown size={14} weight="bold" style={{ color: "var(--mu)" }} />
+              </button>
+
+              {isModelMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsModelMenuOpen(false)}
+                  />
+                  <div
+                    className="absolute left-0 top-full mt-1.5 w-64 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100"
+                    style={{
+                      background: "var(--sh)",
+                      border: "1px solid var(--ln)",
+                    }}
+                  >
+                    <div
+                      className="px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider"
+                      style={{ color: "var(--mu)" }}
+                    >
+                      {t("Model Antigravity")}
+                    </div>
+                    <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto">
+                      {availableModels.map((m) => {
+                        const isSelected = m.id === selectedModel;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedModel(m.id);
+                              setIsModelMenuOpen(false);
+                            }}
+                            className="flex items-center justify-between w-full px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer"
+                            style={{
+                              background: isSelected ? "var(--ab)" : "transparent",
+                              color: isSelected ? "var(--ac)" : "var(--tx)",
+                              fontWeight: isSelected ? 600 : 500,
+                            }}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              {m.category === "fast" ? (
+                                <Lightning size={14} weight="fill" style={{ color: "var(--ac)" }} className="shrink-0" />
+                              ) : (
+                                <Brain size={14} weight="fill" style={{ color: "var(--ac)" }} className="shrink-0" />
+                              )}
+                              <span className="truncate">{m.name}</span>
+                            </div>
+                            {isSelected && <Check size={14} weight="bold" style={{ color: "var(--ac)" }} className="shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="ca-rw">
+            <button
+              type="button"
+              onClick={() => toggleHistoryDrawer()}
+              className="ca-chip"
+              style={
+                isHistoryOpen
+                  ? { background: "var(--ab)", color: "var(--ac)" }
+                  : undefined
+              }
+              title={t("Riwayat Percakapan (AGY Desktop, IDE, CLI)")}
+            >
+              <ClockCounterClockwise size={15} weight="bold" />
+              <span>{t("Riwayat")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => startNewConversation()}
+              className="ca-chip"
+              title={t("Sesi Baru (New Chat)")}
+            >
+              <Plus size={15} weight="bold" />
+              <span>{t("Baru")}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (messages.length > 0 && window.confirm(t("Hapus semua pesan dalam sesi chat ini?"))) {
+                  clearChat();
+                }
+              }}
+              disabled={messages.length === 0 && !streamingText}
+              className={`ca-chip ${messages.length === 0 && !streamingText ? "d opacity-50 pointer-events-none" : "d"}`}
+              title={t("Hapus Chat")}
+            >
+              <Trash size={15} weight="bold" />
+              <span>{t("Hapus")}</span>
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="flex items-center justify-between py-1 mb-1 border-b border-white/[0.05] shrink-0">
         {/* Model Selector Dropdown Pill */}
         <div className="relative">
@@ -303,6 +427,7 @@ export function AgentChatBox({
           )}
         </div>
       </div>
+      )}
 
       {/* ── MESSAGES / STREAMING SCROLL AREA (Dynamically Fills Screen in fillHeight Mode) ── */}
       {displayMessages.length > 0 || isStreaming || streamingText ? (
@@ -324,10 +449,21 @@ export function AgentChatBox({
             >
               <div
                 className={`max-w-[88%] rounded-2xl px-3.5 py-2 text-[12.5px] leading-relaxed select-text whitespace-pre-wrap break-words ${
-                  m.role === "user"
-                    ? "bg-white/15 text-white font-medium rounded-br-xs"
-                    : "bg-[#1c1d25] border border-white/10 text-zinc-200 rounded-bl-xs shadow-sm"
+                  mobile
+                    ? m.role === "user"
+                      ? "font-medium rounded-br-xs"
+                      : "rounded-bl-xs shadow-sm"
+                    : m.role === "user"
+                      ? "bg-white/15 text-white font-medium rounded-br-xs"
+                      : "bg-[#1c1d25] border border-white/10 text-zinc-200 rounded-bl-xs shadow-sm"
                 }`}
+                style={
+                  mobile
+                    ? m.role === "user"
+                      ? { background: "var(--ab)", color: "var(--ac)" }
+                      : { background: "var(--cd)", color: "var(--tx)", boxShadow: "inset 0 0 0 1px var(--ln)" }
+                    : undefined
+                }
               >
                 {m.content}
               </div>
@@ -337,7 +473,16 @@ export function AgentChatBox({
           {/* Streaming Assistant Delta */}
           {isStreaming && streamingText && (
             <div className="flex flex-col items-start animate-in fade-in duration-100">
-              <div className="max-w-[90%] rounded-2xl rounded-bl-xs bg-[#1c1d25] border border-sky-500/30 px-3.5 py-2 text-[12.5px] text-zinc-200 leading-relaxed select-text shadow-sm whitespace-pre-wrap break-words">
+              <div
+                className={`max-w-[90%] rounded-2xl rounded-bl-xs px-3.5 py-2 text-[12.5px] leading-relaxed select-text shadow-sm whitespace-pre-wrap break-words ${
+                  mobile ? "" : "bg-[#1c1d25] border border-sky-500/30 text-zinc-200"
+                }`}
+                style={
+                  mobile
+                    ? { background: "var(--cd)", color: "var(--tx)", boxShadow: "inset 0 0 0 1px var(--ac)" }
+                    : undefined
+                }
+              >
                 <span>{streamingText}</span>
                 <span className="inline-block w-1.5 h-3.5 ml-1 bg-sky-400 animate-pulse align-middle" />
               </div>
@@ -346,6 +491,32 @@ export function AgentChatBox({
           <div ref={messagesEndRef} />
         </div>
       ) : fillHeight ? (
+        mobile ? (
+          <div className="flex-1 flex flex-col items-center justify-center py-2 text-center my-auto animate-in fade-in duration-200">
+            <b className="ca-et" style={{ marginTop: 12 }}>
+              {t("Antigravity Interactive Agent")}
+            </b>
+            <p className="ca-ep">
+              {t("Kirim instruksi coding, jalankan perintah bash, atau tanyakan struktur kode.")}
+            </p>
+            <div className="ca-rw ca-ce" style={{ marginTop: 14 }}>
+              {[
+                "git status -s",
+                "Periksa perubahan terbaru",
+                "Jelaskan alur aplikasi ini",
+              ].map((promptText, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => void sendAgentChat(promptText)}
+                  className="ca-chip"
+                >
+                  {promptText}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
         /* Helpful starter suggestions when chat has no messages yet */
         <div className="flex-1 flex flex-col items-center justify-center p-3 text-center my-auto min-h-[120px] animate-in fade-in duration-200">
           <div className="w-9 h-9 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-400 mb-2">
@@ -374,6 +545,7 @@ export function AgentChatBox({
             ))}
           </div>
         </div>
+        )
       ) : null}
 
       {/* ── ATTACHMENT PREVIEW CHIPS ── */}
@@ -383,6 +555,11 @@ export function AgentChatBox({
             <div
               key={i}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/10 border border-white/15 text-[11.5px] text-zinc-300 shrink-0"
+              style={
+                mobile
+                  ? { background: "var(--cd)", borderColor: "var(--ln)", color: "var(--tx)" }
+                  : undefined
+              }
             >
               {att.previewUrl ? (
                 <img
@@ -406,8 +583,88 @@ export function AgentChatBox({
         </div>
       )}
 
+      {/* ── CONNECTION NOTICE (If Antigravity is not connected) ── */}
+      {!isHookInstalled && (
+        <div
+          className="mb-2 flex items-center justify-between rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-[11px] text-amber-200"
+          style={
+            mobile
+              ? { background: "var(--amb)", color: "var(--amt)", borderColor: "var(--ln)" }
+              : undefined
+          }
+        >
+          <span>{t("Antigravity tidak terbuka atau belum terhubung.")}</span>
+          <button
+            type="button"
+            onClick={() => void toggleHooks(true)}
+            className="rounded-lg bg-amber-500/20 px-2.5 py-1 text-[10.5px] font-semibold text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 cursor-pointer"
+            style={
+              mobile
+                ? { background: "#FF9F0A", color: "#171A26", border: "0" }
+                : undefined
+            }
+          >
+            {t("Hubungkan")}
+          </button>
+        </div>
+      )}
+
       {/* ── CHAT INPUT FORM (With Paste & Attach) ── */}
-      <div className="relative flex items-end gap-1.5 rounded-2xl bg-white/[0.07] border border-white/10 p-2 focus-within:border-white/30 transition-colors">
+      {mobile ? (
+        <div className={`ca-cp mt-auto shrink-0 ${!isHookInstalled ? "opacity-60" : ""}`}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!isHookInstalled || isUploading}
+            className="ca-ib"
+            title={t("Lampirkan file atau screenshot (bisa Ctrl+V)")}
+          >
+            <Paperclip size={20} weight="bold" className={isUploading ? "animate-spin" : ""} />
+          </button>
+          <textarea
+            ref={textareaRef}
+            value={draft}
+            rows={1}
+            disabled={!isHookInstalled || isStreaming}
+            placeholder={
+              !isHookInstalled
+                ? t("Antigravity tidak terbuka atau belum terhubung")
+                : t("Ketik instruksi coding atau paste screenshot...")
+            }
+            onPaste={handlePaste}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 96)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            className="max-h-[96px] min-h-[24px] flex-1 resize-none bg-transparent py-1 text-[14.5px] outline-none [scrollbar-width:none] disabled:cursor-not-allowed"
+            style={{ color: "var(--tx)" }}
+          />
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={!isHookInstalled || (!draft.trim() && attachments.length === 0)}
+            className={`ca-sd ${!isHookInstalled || (!draft.trim() && attachments.length === 0) ? "d" : ""}`}
+            aria-label="Send"
+          >
+            <ArrowUp size={18} weight="bold" />
+          </button>
+        </div>
+      ) : (
+      <div className={`relative flex items-end gap-1.5 rounded-2xl bg-white/[0.07] border border-white/10 p-2 focus-within:border-white/30 transition-colors ${!isHookInstalled ? "opacity-60" : ""}`}>
         <input
           ref={fileInputRef}
           type="file"
@@ -420,8 +677,8 @@ export function AgentChatBox({
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-colors"
+          disabled={!isHookInstalled || isUploading}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-colors disabled:pointer-events-none disabled:opacity-40"
           title={t("Lampirkan file atau screenshot (bisa Ctrl+V)")}
         >
           <Paperclip size={16} weight="bold" className={isUploading ? "animate-spin" : ""} />
@@ -432,7 +689,12 @@ export function AgentChatBox({
           ref={textareaRef}
           value={draft}
           rows={1}
-          placeholder={t("Ketik instruksi coding atau paste screenshot...")}
+          disabled={!isHookInstalled || isStreaming}
+          placeholder={
+            !isHookInstalled
+              ? t("Antigravity tidak terbuka atau belum terhubung")
+              : t("Ketik instruksi coding atau paste screenshot...")
+          }
           onPaste={handlePaste}
           onChange={(e) => {
             setDraft(e.target.value);
@@ -445,19 +707,20 @@ export function AgentChatBox({
               handleSend();
             }
           }}
-          className="max-h-[110px] min-h-[26px] flex-1 resize-none bg-transparent py-1 text-[13px] text-white placeholder-zinc-500 outline-none [scrollbar-width:none]"
+          className="max-h-[110px] min-h-[26px] flex-1 resize-none bg-transparent py-1 text-[13px] text-white placeholder-zinc-500 outline-none [scrollbar-width:none] disabled:cursor-not-allowed"
         />
 
         {/* Send Button */}
         <button
           type="button"
           onClick={handleSend}
-          disabled={!draft.trim() && attachments.length === 0}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none transition-all shadow-sm"
+          disabled={!isHookInstalled || (!draft.trim() && attachments.length === 0)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black hover:bg-zinc-200 disabled:opacity-20 disabled:pointer-events-none transition-all shadow-sm cursor-pointer"
         >
           <ArrowUp size={15} weight="bold" />
         </button>
       </div>
+      )}
 
       {/* ── HISTORY DRAWER (Responsive Modal / Bottom Sheet) ── */}
       {isHistoryOpen && (
@@ -580,8 +843,9 @@ export function AgentChatBox({
                       )}
                       {c.workspace && (
                         <div className="mt-2 flex items-center gap-1 text-[10px] text-zinc-500 font-mono">
-                          <span className="truncate max-w-[340px] bg-white/[0.05] px-2 py-0.5 rounded-md border border-white/5">
-                            📂 {c.workspace}
+                          <span className="inline-flex items-center gap-1.5 truncate max-w-[340px] bg-white/[0.05] px-2 py-0.5 rounded-md border border-white/5">
+                            <FolderSimple size={11} weight="bold" className="shrink-0" />
+                            <span className="truncate">{c.workspace}</span>
                           </span>
                         </div>
                       )}

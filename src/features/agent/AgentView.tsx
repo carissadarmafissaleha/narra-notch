@@ -123,6 +123,18 @@ export function AgentView() {
     }));
   };
 
+  const turboEnabled = !(set.codingAgent?.askPermissions ?? true);
+  const toggleTurbo = () => {
+    const nextAsk = !turboEnabled ? false : true;
+    updateSettings((cur) => ({
+      ...cur,
+      codingAgent: {
+        ...cur.codingAgent,
+        askPermissions: nextAsk,
+      },
+    }));
+  };
+
   const handleOpenSettings = () => {
     navigate("settings", "coding_agent");
   };
@@ -244,6 +256,27 @@ export function AgentView() {
 
         {/* Right Header Actions */}
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className={`flex h-7 items-center gap-1 rounded-[7px] px-2 text-[11px] font-semibold transition-all border ${
+              turboEnabled
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-[0_0_10px_rgba(245,158,11,0.2)]"
+                : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] border-transparent"
+            }`}
+            title={
+              turboEnabled
+                ? t("Mode Turbo aktif: Izin disetujui otomatis")
+                : t("Aktifkan Mode Turbo (Tanpa konfirmasi izin)")
+            }
+            onClick={toggleTurbo}
+          >
+            <Lightning
+              size={13}
+              weight={turboEnabled ? "fill" : "bold"}
+              className={turboEnabled ? "text-amber-400" : ""}
+            />
+            <span>{t("Turbo")}</span>
+          </button>
           <button
             type="button"
             className={`flex h-7 w-7 items-center justify-center rounded-[7px] transition-colors ${

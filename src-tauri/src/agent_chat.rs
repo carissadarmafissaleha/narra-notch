@@ -202,13 +202,48 @@ pub fn list_conversations_internal(query: Option<&str>) -> Vec<ConversationSumma
     results
 }
 
+/// Reject path segments that could escape `.gemini/.../brain/<id>` (`..`, slashes, drive colons).
+fn is_safe_id(id: &str) -> bool {
+    let s = id.trim();
+    !s.is_empty()
+        && s != "."
+        && s != ".."
+        && !s.contains("..")
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+/// Strip directory components and unsafe characters from an uploaded filename.
+fn sanitize_filename(raw: &str) -> Option<String> {
+    let base = std::path::Path::new(raw)
+        .file_name()
+        .and_then(|n| n.to_str())?
+        .trim();
+    if base.is_empty() || base == "." || base == ".." {
+        return None;
+    }
+    let clean: String = base
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' | '\0' => '_',
+            other => other,
+        })
+        .collect();
+    let clean = clean.trim_matches('.').trim().to_string();
+    if clean.is_empty() {
+        None
+    } else {
+        Some(clean)
+    }
+}
+
 /// Delete a conversation from Antigravity history: the summary row, its FTS
 /// entry, the transcript folder, and the per-conversation store. This is what
 /// the trash button next to a history item removes.
 pub fn delete_conversation_internal(conv_id: &str) -> Result<bool, String> {
     let id = conv_id.trim();
-    if id.is_empty() {
-        return Err("Missing conversation id".to_string());
+    if !is_safe_id(id) {
+        return Err("Invalid conversation id".to_string());
     }
 
     let mut removed = false;
@@ -260,6 +295,10 @@ pub fn delete_conversation_internal(conv_id: &str) -> Result<bool, String> {
 
 /// Read transcripts for a given conversation UUID
 pub fn get_conversation_messages_internal(conv_id: &str) -> Vec<ChatMessage> {
+    let conv_id = conv_id.trim();
+    if !is_safe_id(conv_id) {
+        return Vec::new();
+    }
     let mut messages = Vec::new();
     let mut brain_paths = Vec::new();
 
@@ -590,7 +629,13 @@ pub fn agent_save_temp_attachment(
     base64_data: String,
     conversation_id: Option<String>,
 ) -> Result<String, String> {
-    let conv_id = conversation_id.unwrap_or_else(|| "shared_uploads".to_string());
+    let conv_id = conversation_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|id| is_safe_id(id))
+        .unwrap_or("shared_uploads")
+        .to_string();
+    let safe_name = sanitize_filename(&name).ok_or_else(|| "Invalid attachment filename".to_string())?;
     let user_profile = std::env::var("USERPROFILE").map_err(|e| e.to_string())?;
 
     let upload_dir = PathBuf::from(user_profile)
@@ -607,8 +652,38 @@ pub fn agent_save_temp_attachment(
         .decode(&base64_data)
         .map_err(|e| e.to_string())?;
 
-    let file_path = upload_dir.join(&name);
+    let file_path = upload_dir.join(&safe_name);
     fs::write(&file_path, decoded).map_err(|e| e.to_string())?;
 
     Ok(file_path.to_string_lossy().to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_id_blocks_path_traversal() {
+        assert!(is_safe_id("6b7e79c9-44cb-4bb7-8bcb-a249a2b7f483"));
+        assert!(is_safe_id("shared_uploads"));
+        assert!(!is_safe_id(""));
+        assert!(!is_safe_id(".."));
+        assert!(!is_safe_id("../etc/passwd"));
+        assert!(!is_safe_id("..\\windows\\system32"));
+        assert!(!is_safe_id("a/b"));
+    }
+
+    #[test]
+    fn sanitize_filename_strips_directories() {
+        assert_eq!(
+            sanitize_filename("../../Startup/evil.bat"),
+            Some("evil.bat".to_string())
+        );
+        assert_eq!(
+            sanitize_filename(r"C:\Users\book\Desktop\photo.png"),
+            Some("photo.png".to_string())
+        );
+        assert_eq!(sanitize_filename(".."), None);
+        assert_eq!(sanitize_filename(""), None);
+    }
 }

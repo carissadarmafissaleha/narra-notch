@@ -311,7 +311,7 @@ export function Slider(props: {
       aria-valuenow={props.value}
       aria-valuemin={props.min}
       aria-valuemax={props.max}
-      className="relative flex h-5 w-full cursor-pointer touch-none items-center outline-none"
+      className="relative flex h-6 w-full cursor-pointer touch-none items-center outline-none"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         set(e.clientX);
@@ -326,14 +326,14 @@ export function Slider(props: {
           props.onChange(Math.max(props.min, props.value - step));
       }}
     >
-      <div className="relative h-1 w-full overflow-hidden rounded-full bg-fill-2">
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-fill-2">
         <div
           className="absolute inset-0 origin-left rounded-full bg-label-2"
           style={{ transform: `scaleX(${ratio})` }}
         />
       </div>
       <span
-        className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_3px_rgb(0_0_0/0.5)]"
+        className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0/0.45)] transition-transform active:scale-110"
         style={{ left: `${ratio * 100}%` }}
       />
     </div>

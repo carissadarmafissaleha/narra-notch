@@ -1,5 +1,29 @@
 [
   {
+    "version": "2.2.1",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "de": "Überarbeitetes mobiles Begleiter-Design: Größerer Mochi-Mascot-Bereich, sanfte animierte Dock-Navigation (Terminal, Diff, Antigravity, OpenCode) mit adaptivem Schieberegler",
+        "en": "Redesigned mobile companion layout: Enlarged Mochi mascot area, fluid animated dock navigation (Terminal, Diff, Antigravity, OpenCode) with auto-resizing spring pill indicator",
+        "highlight": true
+      },
+      {
+        "de": "OpenCode-Datei-Upload & Pair-Bildschirm: Direkter Datei-Upload im mobilen Chat und 8-stelliges Pairing für OpenCode-Sitzungen",
+        "en": "OpenCode file upload & pairing screen: File attachments supported in mobile chat and 8-character pairing screen for OpenCode sessions",
+        "highlight": true
+      },
+      {
+        "de": "Sound-Slider & Turbo-Modus: Verbesserter Lautstärkeregler in den Einstellungen sowie Turbo-Modus-Schalter im Header und Einstellungsmenü",
+        "en": "Sound slider & Turbo mode: Enlarged sound volume slider in agent settings, plus quick Turbo mode toggle in the header and settings panel"
+      },
+      {
+        "de": "Schneller Dark/Light-Modus: Sofortiger Wechsel zwischen Dunkel-, Hell- und Auto-Modus direkt neben dem Einstellungs-Zahnrad",
+        "en": "Quick Dark/Light toggle: Immediate theme switching beside the settings gear, preserving custom Mochi wardrobe outfits"
+      }
+    ]
+  },
+  {
     "version": "2.2.0",
     "date": "2026-11-14",
     "items": [

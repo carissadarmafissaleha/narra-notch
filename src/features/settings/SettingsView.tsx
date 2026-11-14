@@ -413,258 +413,273 @@ function CodingAgentSettings() {
   ];
 
   return (
-    <Group title={t("Coding Agent (Coucou Companion)")} id="settings-coding-agent">
-      <Row
-        label={t("Maskot Mochi di Notch")}
-        hint={t("Tampilkan karakter animasi Mochi di tepi notch saat agent aktif")}
-      >
-        <Switch
-          label={t("Maskot Mochi")}
-          checked={ca.mochiEnabled}
-          onChange={(mochiEnabled) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, mochiEnabled },
-            }))
+    <div className="flex flex-col gap-6" id="settings-coding-agent">
+      {/* ── CARD 1: ANTIGRAVITY (AGY) ── */}
+      <Group title={t("Antigravity (AGY) Agent")} id="settings-antigravity">
+        <Row
+          label={t("Status Integrasi")}
+          stack
+          hint={
+            agent.isHookInstalled
+              ? t("Terhubung & Aktif di ~/.gemini/config/hooks.json")
+              : t("Belum terhubung ke Antigravity. Pasang hooks agar notch dapat mendeteksi aktivitas coding.")
           }
-        />
-      </Row>
-      <Row
-        label={t("Mochi di Notch Tertutup")}
-        hint={t("Hanya tampil di notch tertutup saat terhubung ke Antigravity. Notch tetap bersih tanpa mochi jika tidak terhubung.")}
-      >
-        <Switch
-          label={t("Mochi di Notch Tertutup")}
-          checked={ca.closedNotchMochi ?? true}
-          onChange={(closedNotchMochi) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, closedNotchMochi },
-            }))
-          }
-        />
-      </Row>
-      <Row
-        label={t("Mata Mengikuti Kursor")}
-        hint={t("Pupil mata Mochi bergerak dinamis mengikuti posisi kursor mouse")}
-      >
-        <Switch
-          label={t("Mata Mengikuti Kursor")}
-          checked={ca.trackCursor}
-          onChange={(trackCursor) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, trackCursor },
-            }))
-          }
-        />
-      </Row>
-      <Row
-        label={t("Aksesoris & Topi Mochi")}
-        hint={t("Pilih aksesoris atau gunakan mode otomatis berdasarkan musim & waktu")}
-      >
-        <Select
-          width="w-52"
-          value={ca.mochiOutfit || "auto"}
-          onChange={(mochiOutfit) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, mochiOutfit },
-            }))
-          }
-          options={outfitOptions}
-        />
-      </Row>
-      <Row
-        label={t("Efek Suara")}
-        stack
-        hint={t("Efek suara saat mulai Read, Edit, Bash, Done, dan Konfirmasi")}
-      >
-        <Switch
-          label={t("Efek Suara")}
-          checked={ca.soundEnabled}
-          onChange={(soundEnabled) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, soundEnabled },
-            }))
-          }
-        />
-        <Button onClick={() => playFinishSound()}>{t("Tes Suara")}</Button>
-      </Row>
-      <Row
-        label={t("Volume Suara")}
-        hint={t("Tingkat volume efek suara Coding Agent")}
-      >
-        <div className="flex items-center gap-2.5">
-          <Slider
-            label={t("Volume Suara")}
-            value={Math.round((ca.soundVolume ?? 0.6) * 100)}
-            min={5}
-            max={100}
-            step={5}
-            onChange={(v) =>
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {agent.isHookInstalled ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-caption font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{t("Terhubung")}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span>{t("Belum Terpasang")}</span>
+              </span>
+            )}
+            <Button
+              primary={!agent.isHookInstalled}
+              onClick={() => toggleHooks(!agent.isHookInstalled)}
+            >
+              {agent.isHookInstalled ? t("Hapus Hooks") : t("Pasang Hooks Otomatis (1-Klik)")}
+            </Button>
+          </div>
+        </Row>
+        <Row
+          label={t("Chat Antigravity")}
+          hint={t("Aktifkan tab & fitur chat Antigravity di Notch Windows dan Mobile Companion.")}
+        >
+          <Switch
+            label={t("Chat Antigravity")}
+            checked={ca.chatEnabled ?? false}
+            onChange={(chatEnabled) =>
               updateSettings((cur) => ({
-                codingAgent: { ...cur.codingAgent, soundVolume: v / 100 },
+                codingAgent: { ...cur.codingAgent, chatEnabled },
               }))
             }
           />
-          <span className="tabular w-8 text-right text-caption text-label-2">
-            {Math.round((ca.soundVolume ?? 0.6) * 100)}%
-          </span>
-        </div>
-      </Row>
-      <Row
-        label={t("Chat Antigravity")}
-        hint={t("Tampilkan tab & card chat Antigravity di Coding Agent (Notch dan iPhone/PWA).")}
-      >
-        <Switch
-          label={t("Chat Antigravity")}
-          checked={ca.chatEnabled ?? false}
-          onChange={(chatEnabled) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, chatEnabled },
-            }))
+        </Row>
+      </Group>
+
+      {/* ── CARD 2: OPENCODE ── */}
+      <Group title={t("OpenCode Agent")} id="settings-opencode">
+        <Row
+          label={t("Status Integrasi")}
+          stack
+          hint={
+            agent.isOpencodeHookInstalled
+              ? t("Terhubung & Aktif di ~/.config/opencode/plugins/narra-notch.ts")
+              : t("Belum terhubung ke OpenCode. Pasang plugin agar notch dapat mendeteksi aktivitas OpenCode.")
           }
-        />
-      </Row>
-      <Row
-        label={t("Chat OpenCode")}
-        hint={t("Tampilkan tab & card chat OpenCode di Coding Agent (Notch dan iPhone/PWA).")}
-      >
-        <Switch
-          label={t("Chat OpenCode")}
-          checked={ca.opencodeChatEnabled ?? false}
-          onChange={(opencodeChatEnabled) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, opencodeChatEnabled },
-            }))
-          }
-        />
-      </Row>
-      <Row
-        label={t("OpenCode-Izin")}
-        hint={t("Shell und Datei-Änderungen vor der Ausführung im Notch bestätigen. Gilt nur, solange das Plugin verbunden ist – opencode.json bleibt unverändert.")}
-      >
-        <Switch
-          label={t("OpenCode-Izin")}
-          checked={ca.askPermissions ?? true}
-          onChange={(askPermissions) =>
-            updateSettings((cur) => ({
-              codingAgent: { ...cur.codingAgent, askPermissions },
-            }))
-          }
-        />
-      </Row>
-      <Row
-        label={t("Lifecycle Hooks Antigravity")}
-        stack
-        hint={
-          agent.isHookInstalled
-            ? t("Terhubung & Aktif di ~/.gemini/config/hooks.json")
-            : t("Belum terhubung ke Antigravity. Klik tombol untuk pasang otomatis.")
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {agent.isHookInstalled ? (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-caption font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{t("Terhubung")}</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              <span>{t("Belum Terpasang")}</span>
-            </span>
-          )}
-          <Button
-            primary={!agent.isHookInstalled}
-            onClick={() => toggleHooks(!agent.isHookInstalled)}
-          >
-            {agent.isHookInstalled ? t("Hapus Hooks") : t("⚡ Pasang Hooks (1-Klik)")}
-          </Button>
-        </div>
-      </Row>
-      <Row
-        label={t("Lifecycle Hooks OpenCode")}
-        stack
-        hint={
-          agent.isOpencodeHookInstalled
-            ? t("Terhubung & Aktif di ~/.config/opencode/plugins/narra-notch.ts")
-            : t("Belum terhubung ke OpenCode. Klik tombol untuk pasang otomatis.")
-        }
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          {agent.isOpencodeHookInstalled ? (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-caption font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>{t("Terhubung")}</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              <span>{t("Belum Terpasang")}</span>
-            </span>
-          )}
-          <Button
-            primary={!agent.isOpencodeHookInstalled}
-            onClick={() => toggleOpencodeHooks(!agent.isOpencodeHookInstalled)}
-          >
-            {agent.isOpencodeHookInstalled ? t("Hapus Hooks") : t("⚡ Pasang Hooks (1-Klik)")}
-          </Button>
-        </div>
-      </Row>
-      <Row
-        label={t("Mobile Companion (iPhone PWA)")}
-        stack
-        hint={
-          companionInfo
-            ? t("Buka URL di Safari iPhone untuk review & approve coding agent langsung dari ponsel.")
-            : t("Server companion lokal port 1421")
-        }
-      >
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-          {companionInfo ? (
-            <span className="min-w-0 flex-1 truncate font-mono text-caption text-zinc-300 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 select-all">
-              {companionInfo.url}
-            </span>
-          ) : (
-            <span className="min-w-0 flex-1 truncate text-caption text-zinc-500">http://192.168.x.x:1421</span>
-          )}
-          <Button onClick={handleCopyUrl}>
-            {copiedUrl ? t("Tersalin!") : t("Salin URL")}
-          </Button>
-        </div>
-      </Row>
-      <Row
-        label={t("Kode pairing HP")}
-        stack
-        hint={
-          pairing.paired
-            ? t("Hanya HP dengan kode ini yang boleh terhubung ke server companion.")
-            : t("Terbuka di LAN: semua perangkat di Wi-Fi ini bisa terhubung. Buat kode untuk mengunci.")
-        }
-      >
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
-          {pairing.paired ? (
-            <span className="min-w-0 flex-1 truncate font-mono text-caption tracking-[0.2em] text-zinc-100 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 select-all">
-              {pairing.token}
-            </span>
-          ) : (
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              <span>{t("Terbuka di LAN")}</span>
-            </span>
-          )}
-          {pairing.paired && (
-            <Button onClick={copyPairing}>
-              {copiedCode ? t("Tersalin!") : t("Salin kode")}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {agent.isOpencodeHookInstalled ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-caption font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{t("Terhubung")}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span>{t("Belum Terpasang")}</span>
+              </span>
+            )}
+            <Button
+              primary={!agent.isOpencodeHookInstalled}
+              onClick={() => toggleOpencodeHooks(!agent.isOpencodeHookInstalled)}
+            >
+              {agent.isOpencodeHookInstalled ? t("Hapus Plugin") : t("Pasang Plugin Otomatis (1-Klik)")}
             </Button>
-          )}
-          <Button primary={!pairing.paired} onClick={createPairing}>
-            {pairing.paired ? t("Kode baru") : t("Buat kode")}
-          </Button>
-          {pairing.paired && (
-            <Button onClick={clearPairing}>{t("Matikan kunci")}</Button>
-          )}
-        </div>
-      </Row>
-    </Group>
+          </div>
+        </Row>
+        <Row
+          label={t("Chat OpenCode")}
+          hint={t("Aktifkan tab & fitur chat OpenCode di Notch Windows dan Mobile Companion.")}
+        >
+          <Switch
+            label={t("Chat OpenCode")}
+            checked={ca.opencodeChatEnabled ?? false}
+            onChange={(opencodeChatEnabled) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, opencodeChatEnabled },
+              }))
+            }
+          />
+        </Row>
+        <Row
+          label={t("Konfirmasi Izin (OpenCode)")}
+          hint={t("Minta persetujuan sebelum eksekusi shell & edit file. Matikan untuk mengaktifkan Mode Turbo (auto-approve).")}
+        >
+          <Switch
+            label={t("Konfirmasi Izin (OpenCode)")}
+            checked={ca.askPermissions ?? true}
+            onChange={(askPermissions) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, askPermissions },
+              }))
+            }
+          />
+        </Row>
+      </Group>
+
+      {/* ── CARD 3: MOCHI MASCOT & SUARA ── */}
+      <Group title={t("Maskot Mochi & Efek Suara")} id="settings-mochi">
+        <Row
+          label={t("Maskot Mochi di Notch")}
+          hint={t("Tampilkan karakter animasi Mochi di tepi notch saat agent aktif")}
+        >
+          <Switch
+            label={t("Maskot Mochi")}
+            checked={ca.mochiEnabled}
+            onChange={(mochiEnabled) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, mochiEnabled },
+              }))
+            }
+          />
+        </Row>
+        <Row
+          label={t("Mochi di Notch Tertutup")}
+          hint={t("Tampil di notch tertutup saat terhubung ke Coding Agent. Notch tetap bersih jika tidak terhubung.")}
+        >
+          <Switch
+            label={t("Mochi di Notch Tertutup")}
+            checked={ca.closedNotchMochi ?? true}
+            onChange={(closedNotchMochi) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, closedNotchMochi },
+              }))
+            }
+          />
+        </Row>
+        <Row
+          label={t("Mata Mengikuti Kursor")}
+          hint={t("Pupil mata Mochi bergerak dinamis mengikuti posisi kursor mouse")}
+        >
+          <Switch
+            label={t("Mata Mengikuti Kursor")}
+            checked={ca.trackCursor}
+            onChange={(trackCursor) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, trackCursor },
+              }))
+            }
+          />
+        </Row>
+        <Row
+          label={t("Aksesoris & Topi Mochi")}
+          hint={t("Pilih aksesoris atau gunakan mode otomatis berdasarkan musim & waktu")}
+        >
+          <Select
+            width="w-52"
+            value={ca.mochiOutfit || "auto"}
+            onChange={(mochiOutfit) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, mochiOutfit },
+              }))
+            }
+            options={outfitOptions}
+          />
+        </Row>
+        <Row
+          label={t("Efek Suara")}
+          stack
+          hint={t("Efek suara saat mulai Read, Edit, Bash, Done, dan Konfirmasi")}
+        >
+          <Switch
+            label={t("Efek Suara")}
+            checked={ca.soundEnabled}
+            onChange={(soundEnabled) =>
+              updateSettings((cur) => ({
+                codingAgent: { ...cur.codingAgent, soundEnabled },
+              }))
+            }
+          />
+          <Button onClick={() => playFinishSound()}>{t("Tes Suara")}</Button>
+        </Row>
+        <Row
+          label={t("Volume Suara")}
+          hint={t("Tingkat volume efek suara Coding Agent")}
+        >
+          <div className="flex w-52 sm:w-60 items-center gap-3">
+            <Slider
+              label={t("Volume Suara")}
+              value={Math.round((ca.soundVolume ?? 0.6) * 100)}
+              min={5}
+              max={100}
+              step={5}
+              onChange={(v) =>
+                updateSettings((cur) => ({
+                  codingAgent: { ...cur.codingAgent, soundVolume: v / 100 },
+                }))
+              }
+            />
+            <span className="tabular w-8 text-right text-caption text-label-2 font-mono">
+              {Math.round((ca.soundVolume ?? 0.6) * 100)}%
+            </span>
+          </div>
+        </Row>
+      </Group>
+
+      {/* ── CARD 4: MOBILE COMPANION & KEAMANAN ── */}
+      <Group title={t("Mobile Companion & Keamanan (Handy Koppeln)")} id="settings-companion">
+        <Row
+          label={t("Mobile Companion (iPhone / Android)")}
+          stack
+          hint={
+            companionInfo
+              ? t("Buka URL di browser HP untuk memantau progress, chat, dan kontrol agent dari ponsel.")
+              : t("Server companion lokal port 1421")
+          }
+        >
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            {companionInfo ? (
+              <span className="min-w-0 flex-1 truncate font-mono text-caption text-zinc-300 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 select-all">
+                {companionInfo.url}
+              </span>
+            ) : (
+              <span className="min-w-0 flex-1 truncate text-caption text-zinc-500">http://192.168.x.x:1421</span>
+            )}
+            <Button onClick={handleCopyUrl}>
+              {copiedUrl ? t("Tersalin!") : t("Salin URL")}
+            </Button>
+          </div>
+        </Row>
+        <Row
+          label={t("Kode pairing HP")}
+          stack
+          hint={
+            pairing.paired
+              ? t("Hanya HP dengan kode ini yang boleh mengakses chat dan aksi sensitif agent.")
+              : t("Terbuka di LAN: semua perangkat di Wi-Fi ini bisa memantau. Buat kode untuk mengunci akses chat & izin.")
+          }
+        >
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+            {pairing.paired ? (
+              <span className="min-w-0 flex-1 truncate font-mono text-caption tracking-[0.2em] text-zinc-100 px-2.5 py-1 rounded-md bg-white/[0.06] border border-white/10 select-all">
+                {pairing.token}
+              </span>
+            ) : (
+              <span className="flex min-w-0 flex-1 items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-400 text-caption font-semibold">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span>{t("Terbuka di LAN")}</span>
+              </span>
+            )}
+            {pairing.paired && (
+              <Button onClick={copyPairing}>
+                {copiedCode ? t("Tersalin!") : t("Salin kode")}
+              </Button>
+            )}
+            <Button primary={!pairing.paired} onClick={createPairing}>
+              {pairing.paired ? t("Kode baru") : t("Buat kode")}
+            </Button>
+            {pairing.paired && (
+              <Button onClick={clearPairing}>{t("Matikan kunci")}</Button>
+            )}
+          </div>
+        </Row>
+      </Group>
+    </div>
   );
 }
 

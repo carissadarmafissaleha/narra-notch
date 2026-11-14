@@ -4,7 +4,7 @@ import { media } from "../platform/media";
 import { mockDiscord, mockPrivacy, secrets } from "../platform/services";
 import { settings, updateSettings, type NotchTheme } from "../settings/store";
 import { waterLog } from "../features/water/store";
-import { agentStore } from "../features/agent/store";
+import { agentStore, agentChatStore } from "../features/agent/store";
 import { agentSubTabStore } from "../features/agent/AgentView";
 import { lyricsSettings } from "../features/lyrics/store";
 import { setCachedLyrics } from "../features/lyrics/lrclib";
@@ -52,7 +52,8 @@ export function startShowcase() {
   const targetTab = params.get("tab") || "overview";
   const targetSection = params.get("section") || null;
   const targetTheme = (params.get("theme") as NotchTheme) || "monochrome";
-  const lang = (params.get("lang") as "id" | "en") || "id";
+  const lang = (params.get("lang") as "id" | "en") || "en";
+  const isEn = lang === "en";
   const isClosed = params.has("closed");
 
   updateSettings((s) => ({
@@ -65,7 +66,7 @@ export function startShowcase() {
       ...s.tools.filter((x) => !SHOWCASE_TOOLS.includes(x.id)).map((x) => ({ id: x.id, enabled: false })),
     ],
     trading: { env: "live" },
-    weather: { name: "Jakarta", lat: -6.2, lon: 106.8, auto: false },
+    weather: { name: isEn ? "New York" : "Jakarta", lat: isEn ? 40.7128 : -6.2, lon: isEn ? -74.006 : 106.8, auto: false },
     ask: { provider: "anthropic", configs: { ...s.ask.configs, anthropic: { model: "Claude 3.7 Sonnet", effort: "high", baseUrl: "" } } },
     codingAgent: {
       mochiEnabled: true,
@@ -74,6 +75,8 @@ export function startShowcase() {
       soundVolume: 0.6,
       closedNotchMochi: true,
       mochiOutfit: "auto",
+      chatEnabled: true,
+      opencodeChatEnabled: true,
     },
   }));
 
@@ -95,12 +98,21 @@ export function startShowcase() {
   try {
     localStorage.setItem(
       "todos",
-      JSON.stringify([
-        { id: "1", text: "Integrasi Coding Agent Antigravity & Claude Code", done: true, starred: true },
-        { id: "2", text: "Uji coba persetujuan Allow / Deny di Notch", done: true, starred: true },
-        { id: "3", text: "Sinkronisasi lirik LRCLIB pada Pemutar Media", done: false, starred: true },
-        { id: "4", text: "Verifikasi notch bebas jendela terminal hitam", done: false, starred: false },
-      ])
+      JSON.stringify(
+        isEn
+          ? [
+              { id: "1", text: "Integrate Antigravity & OpenCode AI Agent", done: true, starred: true },
+              { id: "2", text: "Test Allow / Deny approval prompts in Notch", done: true, starred: true },
+              { id: "3", text: "Sync real-time karaoke lyrics via LRCLIB", done: false, starred: true },
+              { id: "4", text: "Verify clean desktop companion mode", done: false, starred: false },
+            ]
+          : [
+              { id: "1", text: "Integrasi Coding Agent Antigravity & Claude Code", done: true, starred: true },
+              { id: "2", text: "Uji coba persetujuan Allow / Deny di Notch", done: true, starred: true },
+              { id: "3", text: "Sinkronisasi lirik LRCLIB pada Pemutar Media", done: false, starred: true },
+              { id: "4", text: "Verifikasi notch bebas jendela terminal hitam", done: false, starred: false },
+            ]
+      )
     );
   } catch {}
 
@@ -109,7 +121,16 @@ export function startShowcase() {
     localStorage.setItem(
       "note",
       JSON.stringify(
-`Narra Notch v1.3.6
+        isEn
+          ? `Narra Notch v2.2.1
+
+Key Highlights:
+- Dynamic Island notch companion for Windows 10 & 11
+- Coding Agent with Mochi mascot, Diff & Approval
+- OpenCode & Antigravity live session bridge
+- Real-time synced lyrics & Media Player
+- Hardware HUD & System Stats`
+          : `Narra Notch v2.2.1
 
 Fitur Utama:
 - TopNavBar tombol mengambang di atas header
@@ -120,6 +141,32 @@ Fitur Utama:
       )
     );
   } catch {}
+
+  // Seed sample English chat messages into agentChatStore
+  agentChatStore.set((cur) => ({
+    ...cur,
+    messages: [
+      {
+        id: "m1",
+        role: "user",
+        content: "Can you help me refactor the notification system and add unit tests?",
+        timestamp: Date.now() - 60000,
+      },
+      {
+        id: "m2",
+        role: "assistant",
+        content: "I've refactored `notification.ts` into modular handlers and added full test coverage in `notification.test.ts`. All 12 test suites are passing!",
+        timestamp: Date.now() - 30000,
+        model: "gemini-2.5-flash",
+      },
+    ],
+    availableModels: [
+      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", category: "fast" },
+      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", category: "reasoning" },
+      { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet", category: "standard" },
+    ],
+    selectedModel: "gemini-2.5-flash",
+  }));
 
   // Agent store state configuration
   const agentStatus = params.get("agentStatus");

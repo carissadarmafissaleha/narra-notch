@@ -166,7 +166,7 @@ pub fn get_state_view(state: &AgentState) -> AgentStateView {
     }
 }
 
-fn is_hook_installed_internal() -> bool {
+pub fn is_hook_installed_internal() -> bool {
     let Some(path) = hooks_config_path() else { return false; };
     if !path.exists() {
         return false;
@@ -536,6 +536,16 @@ pub fn run_hook_client(event_type: &str) -> i32 {
 // Named Pipe Server (runs inside narra-notch GUI background)
 // -----------------------------------------------------------------------------
 
+/// Ensure `cwd` reported over the named pipe is a real local directory (never a UNC path).
+fn is_valid_workspace_dir(raw: &str) -> bool {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() || trimmed.starts_with(r"\\") || trimmed.starts_with("//") {
+        return false;
+    }
+    let path = std::path::Path::new(trimmed);
+    path.is_absolute() && path.is_dir()
+}
+
 #[cfg(windows)]
 pub fn start_pipe_server(app: AppHandle) {
     use tokio::net::windows::named_pipe::ServerOptions;
@@ -554,6 +564,7 @@ pub fn start_pipe_server(app: AppHandle) {
             loop {
                 let server = match ServerOptions::new()
                     .first_pipe_instance(false)
+                    .reject_remote_clients(true)
                     .create(PIPE_NAME)
                 {
                     Ok(s) => s,
@@ -585,7 +596,7 @@ pub fn start_pipe_server(app: AppHandle) {
 
                             let state = app_clone.state::<AgentState>();
                             *state.source.lock().unwrap() = source;
-                            if let Some(c) = cwd {
+                            if let Some(c) = cwd.filter(|c| is_valid_workspace_dir(c)) {
                                 *state.workspace_dir.lock().unwrap() = Some(c);
                             }
                             let response = handle_event(event, payload, &state, &app_clone).await;
@@ -706,10 +717,11 @@ async fn handle_event(
             let _ = app.emit("agent://tool_call", &tool_event);
             crate::companion::broadcast_event("agent://tool_call", &tool_event);
 
-            // Smart Critical & Review Guard: questions, plan feedback, and dangerous ops ask for approval.
+            // Smart Critical & Review Guard: questions, plan feedback, and dangerous ops ask for approval
+            // unless Turbo Mode is active (`!ask_permissions()`).
             // OpenCode already gates tools through its own permission system, so only relay there.
             let raw_cmd = extract_raw_cmd(&payload).unwrap_or_default();
-            if source != "opencode" && is_critical_payload(&payload, &raw_cmd) {
+            if ask_permissions() && source != "opencode" && is_critical_payload(&payload, &raw_cmd) {
                 // Format friendly details for Notch UI
                 let question_text = if lower.contains("ask_question") || lower.contains("question") {
                     payload
@@ -759,8 +771,13 @@ async fn handle_event(
             Some(json!({ "decision": "allow" }))
         }
         "ApprovalRequest" => {
-            // OpenCode permission prompt relayed from the plugin. The plugin only
-            // replies to OpenCode when the user picks allow / always / deny.
+            // OpenCode permission prompt relayed from the plugin. When Turbo Mode is on
+            // (`!ask_permissions()`), auto-approve immediately without prompting.
+            if !ask_permissions() {
+                *state.status.lock().unwrap() = "tool_running".to_string();
+                notify_state(app, state);
+                return Some(json!({ "decision": "allow" }));
+            }
             let tool_name = payload
                 .get("toolName")
                 .and_then(|v| v.as_str())
@@ -1088,10 +1105,33 @@ pub fn agent_is_opencode_hook_installed() -> bool {
     is_opencode_hook_installed_internal()
 }
 
-/// Turn OpenCode shell/edit approvals on or off (the frontend owns the setting).
-#[tauri::command]
-pub fn agent_set_ask_permissions(enabled: bool) {
+/// Apply `askPermissions` (where `!enabled` = Turbo Mode) and sync with the
+/// mobile companion. If Turbo Mode is turned on while an approval is waiting,
+/// resolve it immediately as `"allow"` so the agent does not stay blocked.
+pub fn apply_ask_permissions(enabled: bool, app: &AppHandle) {
     set_ask_permissions(enabled);
+    crate::companion::broadcast_event(
+        "settings://turbo",
+        &json!({ "turbo": !enabled, "askPermissions": enabled }),
+    );
+    if !enabled {
+        let state = app.state::<AgentState>();
+        let pending_id = state
+            .pending
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|p| p.id.clone());
+        if let Some(id) = pending_id {
+            let _ = respond_approval_internal(&id, "allow", &state, app);
+        }
+    }
+}
+
+/// Turn shell/edit approvals on or off (`!enabled` = Turbo Mode).
+#[tauri::command]
+pub fn agent_set_ask_permissions(enabled: bool, app: AppHandle) {
+    apply_ask_permissions(enabled, &app);
 }
 
 /// Refresh an already installed generated plugin after an app update. Files that

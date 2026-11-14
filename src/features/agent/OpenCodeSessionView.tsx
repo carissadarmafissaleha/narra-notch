@@ -1,18 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowsClockwise,
+  ArrowUp,
   Brain,
   CaretDown,
   ChatCircleDots,
   Check,
   Cpu,
+  FileText,
   Key,
   MagnifyingGlass,
+  Paperclip,
   PaperPlaneRight,
   Plus,
   Stop,
   Wrench,
+  X,
 } from "@phosphor-icons/react";
+import { agentService } from "../../platform/services";
 import { agentStore } from "./store";
 import {
   opencodeService,
@@ -135,9 +140,15 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
   const [agents, setAgents] = useState<OpenCodeAgent[]>([]);
   const [models, setModels] = useState<OpenCodeModel[]>([]);
   const [modelQuery, setModelQuery] = useState("");
+  const [sessionSearch, setSessionSearch] = useState("");
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState<
+    { name: string; path: string; previewUrl?: string }[]
+  >([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [needsPairing, setNeedsPairing] = useState(false);
   const [pairCodeDraft, setPairCodeDraft] = useState(() => getCompanionToken());
   const [pairingSubmitting, setPairingSubmitting] = useState(false);
@@ -152,6 +163,16 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
     () => sessions.find((session) => session.id === selectedId),
     [sessions, selectedId],
   );
+
+  const filteredSessions = useMemo(() => {
+    const q = sessionSearch.trim().toLowerCase();
+    if (!q) return sessions;
+    return sessions.filter((s) => {
+      const label = sessionLabel(s).toLowerCase();
+      const id = s.id.toLowerCase();
+      return label.includes(q) || id.includes(q);
+    });
+  }, [sessions, sessionSearch]);
   // New sessions inherit the project and the picks of the one on screen.
   const context = selected ?? sessions[0];
   const busy = Boolean(selected?.time.busy && (!selected.time.idle || selected.time.busy > selected.time.idle));
@@ -288,12 +309,13 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
-  const createSession = async () => {
+  const createSession = async (title?: string) => {
     if (creating) return;
     setCreating(true);
     setError(null);
     try {
       const session = await opencodeService.createSession({
+        title,
         agent: context?.agent,
         model: context?.model,
         directory: context?.location?.directory,
@@ -304,6 +326,7 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
       setMessages([]);
       setSelectedId(session.id);
       setMenu(null);
+      setSessionSearch("");
       composerRef.current?.focus();
     } catch (e) {
       setError(describeError(e));
@@ -350,14 +373,96 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
     }
   };
 
+  const handlePaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        e.preventDefault();
+        setUploading(true);
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const dataUrl = reader.result as string;
+            const base64Data = dataUrl.split(",")[1];
+            const name = `screenshot_${Date.now()}.png`;
+            const savedPath = await agentService.saveTempAttachment(
+              name,
+              base64Data,
+              selectedId || undefined,
+            );
+            setAttachments((prev) => [
+              ...prev,
+              { name, path: savedPath, previewUrl: dataUrl },
+            ]);
+          } catch {
+            setError(t("Gagal mengunggah gambar screenshot."));
+          } finally {
+            setUploading(false);
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      await new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const dataUrl = reader.result as string;
+            const base64Data = dataUrl.split(",")[1];
+            const isImg = file.type.startsWith("image/");
+            const savedPath = await agentService.saveTempAttachment(
+              file.name,
+              base64Data,
+              selectedId || undefined,
+            );
+            setAttachments((prev) => [
+              ...prev,
+              { name: file.name, path: savedPath, previewUrl: isImg ? dataUrl : undefined },
+            ]);
+          } catch {
+            setError(t("Gagal mengunggah file."));
+          } finally {
+            resolve();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const send = async () => {
-    const text = draft.trim();
-    if (!text || !selectedId || sending) return;
+    let text = draft.trim();
+    if ((!text && attachments.length === 0) || !selectedId || sending) return;
+    if (attachments.length > 0) {
+      const mentions = attachments.map((a) => `- ${a.path}`).join("\n");
+      text = text
+        ? `${text}\n\n[Attached files/screenshots]:\n${mentions}`
+        : `[Attached files/screenshots]:\n${mentions}`;
+    }
     setSending(true);
     setError(null);
     try {
       await opencodeService.prompt(selectedId, text);
       setDraft("");
+      setAttachments([]);
       void loadMessages(selectedId);
     } catch (e) {
       setError(describeError(e));
@@ -409,6 +514,60 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
   );
 
   if (needsPairing) {
+    if (mobile) {
+      const chars = Array.from({ length: 8 }, (_, idx) => pairCodeDraft[idx] || "");
+      return (
+        <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+          <b className="ca-et" style={{ fontSize: 20, marginTop: 4 }}>
+            {t("Pairing OpenCode Chat")}
+          </b>
+          <p className="ca-ep" style={{ margin: "10px 8px 0" }}>
+            {t("Buka Notch Windows → Settings → Coding Agent → salin Kode pairing HP untuk membuka chat OpenCode di HP ini.")}
+          </p>
+          <div className="relative my-5">
+            <div className="ca-rw ca-ce" style={{ gap: 5 }}>
+              {chars.map((ch, idx) => (
+                <i
+                  key={idx}
+                  className={`ca-cell ${idx === pairCodeDraft.length ? "active" : ""}`}
+                >
+                  {ch}
+                </i>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={pairCodeDraft}
+              onChange={(e) => setPairCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void submitPairing();
+              }}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+              maxLength={8}
+              aria-label={t("Pairing OpenCode Chat")}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+              autoFocus
+            />
+          </div>
+          {pairingError && (
+            <p className="mb-3 text-[12px] leading-relaxed" style={{ color: "var(--er)" }}>
+              {pairingError}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={pairingSubmitting || !pairCodeDraft.trim()}
+            onClick={() => void submitPairing()}
+            className="ca-bt max-w-[340px]"
+          >
+            {pairingSubmitting ? t("Menghubungkan…") : t("Hubungkan Chat")}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20 shadow-lg">
@@ -455,47 +614,101 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
   return (
     <div className={`relative flex h-full w-full flex-col font-sans text-zinc-200 ${mobile ? "px-1" : ""}`}>
       {/* Header: session picker, new session, connection state */}
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/[0.05] py-1">
+      <div className={`flex shrink-0 items-center justify-between gap-2 ${mobile ? "py-0.5" : "border-b border-white/[0.05] py-1"}`}>
         <div className="relative flex min-w-0 items-center">
           <button
             type="button"
             onClick={() => setMenu(menu === "session" ? null : "session")}
-            className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.10]"
+            className={
+              mobile
+                ? "ca-chip"
+                : "flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[11px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.10]"
+            }
           >
-            <ChatCircleDots size={12} />
-            <span className="max-w-[150px] truncate">
+            {!mobile && <ChatCircleDots size={12} />}
+            <span className="max-w-[160px] truncate">
               {selected ? sessionLabel(selected) : t("Pilih sesi")}
             </span>
-            <CaretDown size={10} weight="bold" className="shrink-0 text-zinc-400" />
+            <CaretDown size={mobile ? 13 : 10} weight="bold" className="shrink-0 text-zinc-400" />
           </button>
 
           {/* Session picker */}
           {menu === "session" && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenu(null)} />
-              <div className="absolute left-0 top-7 z-50 max-h-64 w-[min(19rem,80vw)] overflow-y-auto rounded-xl border border-white/15 bg-[#16171d]/95 p-1.5 shadow-2xl backdrop-blur-xl">
-                {sessions.length === 0 && (
-                  <div className="px-2 py-2 text-[11px] text-zinc-500">{t("Belum ada sesi OpenCode")}</div>
-                )}
-                {sessions.map((session) => (
-                  <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedId(session.id);
-                      setMenu(null);
-                    }}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] transition-colors ${
-                      session.id === selectedId ? "bg-white/[0.10] text-zinc-100" : "text-zinc-400 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{sessionLabel(session)}</span>
-                    <span className="shrink-0 text-[10px] text-zinc-600">
-                      {relativeTime(session.time.updated ?? session.time.created)}
-                    </span>
-                    {session.id === selectedId && <Check size={12} weight="bold" className="text-emerald-400" />}
-                  </button>
-                ))}
+              <div className="absolute left-0 top-7 z-50 max-h-72 w-[min(20rem,85vw)] overflow-hidden rounded-xl border border-white/15 bg-[#16171d]/95 p-1.5 shadow-2xl backdrop-blur-xl flex flex-col">
+                {/* Search Bar */}
+                <div className="relative mb-1 flex items-center rounded-lg border border-white/10 bg-black/40 px-2 py-1">
+                  <MagnifyingGlass size={12} className="shrink-0 text-zinc-500 mr-1.5" />
+                  <input
+                    type="text"
+                    value={sessionSearch}
+                    onChange={(e) => setSessionSearch(e.target.value)}
+                    placeholder={t("Cari riwayat sesi…")}
+                    className="w-full bg-transparent text-[11px] text-zinc-200 placeholder-zinc-500 outline-none"
+                    autoFocus
+                  />
+                  {sessionSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setSessionSearch("")}
+                      className="text-zinc-500 hover:text-zinc-300 p-0.5 rounded cursor-pointer"
+                    >
+                      <X size={11} weight="bold" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick New Session Button */}
+                <button
+                  type="button"
+                  onClick={() => void createSession(sessionSearch.trim() || undefined)}
+                  className="mb-1 flex w-full items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-left text-[11px] font-medium text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                >
+                  <Plus size={11} weight="bold" />
+                  <span>{sessionSearch.trim() ? t("Buat sesi dengan nama ini") : t("Buat sesi baru")}</span>
+                </button>
+
+                {/* Session list or Not Found */}
+                <div className="max-h-56 overflow-y-auto pr-0.5">
+                  {filteredSessions.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-4 px-2 text-center">
+                      <p className="text-[11px] text-zinc-400">
+                        {sessionSearch ? t("Sesi tidak ditemukan") : t("Belum ada sesi OpenCode")}
+                      </p>
+                      {sessionSearch && (
+                        <button
+                          type="button"
+                          onClick={() => void createSession(sessionSearch.trim() || undefined)}
+                          className="mt-2 flex items-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-1 text-[10.5px] font-medium text-emerald-300 hover:bg-emerald-500/25 transition-all cursor-pointer"
+                        >
+                          <Plus size={11} weight="bold" />
+                          <span>{t("Buat sesi baru")}</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {filteredSessions.map((session) => (
+                    <button
+                      key={session.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedId(session.id);
+                        setMenu(null);
+                        setSessionSearch("");
+                      }}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] transition-colors cursor-pointer ${
+                        session.id === selectedId ? "bg-white/[0.10] text-zinc-100" : "text-zinc-400 hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{sessionLabel(session)}</span>
+                      <span className="shrink-0 text-[10px] text-zinc-600">
+                        {relativeTime(session.time.updated ?? session.time.created)}
+                      </span>
+                      {session.id === selectedId && <Check size={12} weight="bold" className="text-emerald-400" />}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -516,10 +729,14 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
             type="button"
             onClick={() => void createSession()}
             disabled={creating}
-            className="rounded-full border border-emerald-500/25 bg-emerald-500/10 p-1.5 text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:pointer-events-none disabled:opacity-40"
+            className={
+              mobile
+                ? "ca-ib"
+                : "rounded-full border border-emerald-500/25 bg-emerald-500/10 p-1.5 text-emerald-300 transition-colors hover:bg-emerald-500/20 disabled:pointer-events-none disabled:opacity-40"
+            }
             title={t("Sesi baru")}
           >
-            <Plus size={12} weight="bold" />
+            <Plus size={mobile ? 18 : 12} weight="bold" />
           </button>
           <button
             type="button"
@@ -527,10 +744,14 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
               void loadSessions();
               if (selectedId) void loadMessages(selectedId);
             }}
-            className="rounded-full border border-white/10 bg-white/[0.06] p-1.5 text-zinc-400 transition-colors hover:text-zinc-200"
+            className={
+              mobile
+                ? "ca-ib"
+                : "rounded-full border border-white/10 bg-white/[0.06] p-1.5 text-zinc-400 transition-colors hover:text-zinc-200"
+            }
             title={t("Segarkan")}
           >
-            <ArrowsClockwise size={12} />
+            <ArrowsClockwise size={mobile ? 18 : 12} weight={mobile ? "bold" : "regular"} />
           </button>
           {mobile && (
             <button
@@ -540,38 +761,46 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
                 setPairingError(null);
                 setNeedsPairing(true);
               }}
-              className="rounded-full border border-white/10 bg-white/[0.06] p-1.5 text-zinc-400 transition-colors hover:text-zinc-200"
+              className="ca-ib"
               title={t("Ubah kode pairing")}
             >
-              <Key size={12} />
+              <Key size={18} weight="bold" />
             </button>
           )}
         </div>
       </div>
 
       {/* Agent + model of the selected session */}
-      <div className="relative flex shrink-0 items-center gap-1.5 py-1">
+      <div className={`relative flex shrink-0 items-center gap-2 ${mobile ? "mt-1.5 mb-1" : "py-1"}`}>
         <button
           type="button"
           disabled={!selectedId}
           onClick={() => setMenu(menu === "agent" ? null : "agent")}
-          className="flex min-w-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-zinc-400 transition-colors hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-40"
+          className={
+            mobile
+              ? `ca-chip ${!selectedId ? "d opacity-60 pointer-events-none" : "d"}`
+              : "flex min-w-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-zinc-400 transition-colors hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-40"
+          }
           title={t("Ganti agent")}
         >
-          <ChatCircleDots size={11} />
-          <span className="max-w-[80px] truncate">{selected?.agent ?? t("Agent")}</span>
-          <CaretDown size={9} weight="bold" className="shrink-0 text-zinc-600" />
+          {!mobile && <ChatCircleDots size={11} />}
+          <span className="max-w-[100px] truncate">{selected?.agent ?? t("Agent")}</span>
+          <CaretDown size={mobile ? 13 : 9} weight="bold" className="shrink-0 text-zinc-600" />
         </button>
         <button
           type="button"
           disabled={!selectedId}
           onClick={() => setMenu(menu === "model" ? null : "model")}
-          className="flex min-w-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-zinc-400 transition-colors hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-40"
+          className={
+            mobile
+              ? `ca-chip ${!selectedId ? "d opacity-60 pointer-events-none" : "d"}`
+              : "flex min-w-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10.5px] text-zinc-400 transition-colors hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-40"
+          }
           title={t("Ganti model")}
         >
-          <Cpu size={11} />
+          {!mobile && <Cpu size={11} />}
           <span className="max-w-[170px] truncate">{modelLabel ?? t("Model")}</span>
-          <CaretDown size={9} weight="bold" className="shrink-0 text-zinc-600" />
+          <CaretDown size={mobile ? 13 : 9} weight="bold" className="shrink-0 text-zinc-600" />
         </button>
 
         {/* Agent picker */}
@@ -665,9 +894,23 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
           </div>
         )}
         {!error && visible.length === 0 && (
-          <div className="flex flex-1 items-center justify-center px-4 text-center text-[11.5px] text-zinc-500">
-            {selectedId ? t("Sesi ini belum punya pesan.") : t("Pilih sesi untuk melihat isinya.")}
-          </div>
+          mobile ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+              <div className="ca-ei" style={{ marginTop: 18 }}>
+                <ChatCircleDots size={26} weight="bold" />
+              </div>
+              <b className="ca-et">
+                {selectedId ? t("Sesi ini belum punya pesan.") : t("Pilih sesi")}
+              </b>
+              <p className="ca-ep">
+                {selectedId ? t("Ketik instruksi untuk OpenCode atau paste screenshot…") : t("Pilih sesi untuk melihat isinya.")}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center px-4 text-center text-[11.5px] text-zinc-500">
+              {selectedId ? t("Sesi ini belum punya pesan.") : t("Pilih sesi untuk melihat isinya.")}
+            </div>
+          )
         )}
         {visible.map((message) => {
           if (message.type === "user") {
@@ -700,32 +943,169 @@ export function OpenCodeSessionView({ mobile = false }: { mobile?: boolean }) {
       </div>
 
       {/* Composer */}
-      <div className="mt-1 flex shrink-0 items-end gap-1.5 border-t border-white/[0.06] pt-1.5">
-        <textarea
-          ref={composerRef}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void send();
+      {mobile ? (
+        <div className="mt-auto flex shrink-0 flex-col pt-1.5">
+          {attachments.length > 0 && (
+            <div className="flex items-center gap-1.5 mb-1.5 overflow-x-auto pb-0.5">
+              {attachments.map((att, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11.5px] shrink-0"
+                  style={{ background: "var(--cd)", borderColor: "var(--ln)", color: "var(--tx)" }}
+                >
+                  {att.previewUrl ? (
+                    <img
+                      src={att.previewUrl}
+                      alt={att.name}
+                      className="w-4 h-4 rounded object-cover"
+                    />
+                  ) : (
+                    <FileText size={13} weight="bold" />
+                  )}
+                  <span className="max-w-[120px] truncate">{att.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(i)}
+                    className="p-0.5 rounded cursor-pointer"
+                  >
+                    <X size={11} weight="bold" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="ca-cp">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            {selectedId && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!selectedId || uploading || sending}
+                className="ca-ib"
+                title={t("Lampirkan file atau screenshot (bisa Ctrl+V)")}
+              >
+                <Paperclip size={20} weight="bold" className={uploading ? "animate-spin" : ""} />
+              </button>
+            )}
+            <textarea
+              ref={composerRef}
+              value={draft}
+              onPaste={handlePaste}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void send();
+                }
+              }}
+              rows={1}
+              disabled={!selectedId || sending}
+              placeholder={
+                selectedId
+                  ? t("Ketik instruksi untuk OpenCode atau paste screenshot…")
+                  : t("Pilih sesi dulu")
+              }
+              className={`max-h-24 min-h-[24px] flex-1 resize-none bg-transparent py-1 text-[14.5px] outline-none [scrollbar-width:none] ${!selectedId ? "pl-3" : ""}`}
+              style={{ color: "var(--tx)" }}
+            />
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={!selectedId || sending || (!draft.trim() && attachments.length === 0)}
+              className={`ca-sd ${!selectedId || sending || (!draft.trim() && attachments.length === 0) ? "d" : ""}`}
+              title={t("Kirim")}
+            >
+              <ArrowUp size={18} weight="bold" />
+            </button>
+          </div>
+        </div>
+      ) : (
+      <div className="mt-1 flex shrink-0 flex-col border-t border-white/[0.06] pt-1.5">
+        {/* Attachment chips preview */}
+        {attachments.length > 0 && (
+          <div className="flex items-center gap-1.5 mb-1.5 overflow-x-auto pb-0.5">
+            {attachments.map((att, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-white/10 border border-white/15 text-[11px] text-zinc-300 shrink-0"
+              >
+                {att.previewUrl ? (
+                  <img
+                    src={att.previewUrl}
+                    alt={att.name}
+                    className="w-3.5 h-3.5 rounded object-cover"
+                  />
+                ) : (
+                  <FileText size={12} weight="bold" className="text-zinc-400" />
+                )}
+                <span className="max-w-[120px] truncate">{att.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(i)}
+                  className="text-zinc-400 hover:text-white p-0.5 rounded hover:bg-white/10 cursor-pointer"
+                >
+                  <X size={10} weight="bold" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-end gap-1.5">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!selectedId || uploading || sending}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-white/10 transition-colors disabled:pointer-events-none disabled:opacity-40 cursor-pointer"
+            title={t("Lampirkan file atau screenshot (bisa Ctrl+V)")}
+          >
+            <Paperclip size={15} weight="bold" className={uploading ? "animate-spin" : ""} />
+          </button>
+          <textarea
+            ref={composerRef}
+            value={draft}
+            onPaste={handlePaste}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void send();
+              }
+            }}
+            rows={1}
+            disabled={!selectedId || sending}
+            placeholder={
+              selectedId
+                ? t("Ketik instruksi untuk OpenCode atau paste screenshot…")
+                : t("Pilih sesi dulu")
             }
-          }}
-          rows={1}
-          disabled={!selectedId || sending}
-          placeholder={selectedId ? t("Ketik pesan untuk OpenCode…") : t("Pilih sesi dulu")}
-          className="max-h-24 min-h-[32px] flex-1 resize-none rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-[12px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-500/40 disabled:opacity-50"
-        />
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={!selectedId || sending || !draft.trim()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-500/30 bg-sky-500/15 text-sky-300 transition-colors hover:bg-sky-500/25 disabled:pointer-events-none disabled:opacity-30"
-          title={t("Kirim")}
-        >
-          <PaperPlaneRight size={13} weight="fill" />
-        </button>
+            className="max-h-24 min-h-[32px] flex-1 resize-none rounded-xl border border-white/10 bg-black/40 px-3 py-1.5 text-[12px] text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-sky-500/40 disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={!selectedId || sending || (!draft.trim() && attachments.length === 0)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-sky-500/30 bg-sky-500/15 text-sky-300 transition-colors hover:bg-sky-500/25 disabled:pointer-events-none disabled:opacity-30 cursor-pointer"
+            title={t("Kirim")}
+          >
+            <PaperPlaneRight size={13} weight="fill" />
+          </button>
+        </div>
       </div>
+      )}
 
       {/* Footer: which OpenCode build we are talking to */}
       {!mobile && (
