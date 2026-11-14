@@ -13,6 +13,7 @@
   "API-Schlüssel in Trading 212 erstellen (Einstellungen → API), Rechte: Konto + Portfolio.": "Create an API key in Trading 212 (Settings → API), permissions: Account + Portfolio.",
   "API-Secret": "API secret",
   "AUTO": "AUTO",
+  "About": "About",
   "Abbrechen": "Cancel",
   "Abgebrochen": "Cancelled",
   "Abgelaufen": "Done",
@@ -847,5 +848,11 @@
   "Notifications": "Notifications",
   "Outfit": "Outfit",
   "Server PC": "PC Server",
-  "Sound": "Sound"
+  "Sound": "Sound",
+  "Buka Notch Windows → Settings → Coding Agent → salin Kode pairing HP untuk membuka chat di HP ini.": "Open Windows Notch → Settings → Coding Agent → copy the Phone pairing code to open chat on this phone.",
+  "Effort": "Effort",
+  "Ketik instruksi untuk Antigravity atau paste screenshot…": "Type instructions for Antigravity or paste screenshot…",
+  "Kode pairing salah. Periksa lagi kode di Notch Windows.": "Invalid pairing code. Check the code on Windows Notch again.",
+  "Pairing Antigravity Chat": "Pair Antigravity Chat",
+  "Percakapan": "Conversation"
 }

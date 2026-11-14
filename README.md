@@ -1,31 +1,34 @@
 <h1 align="center">narra-notch</h1>
 
 <p align="center">
-  <b>A refined Dynamic-Island-style notch bar for Windows 10 & 11.</b>
+  <b>A refined Dynamic-Island-style notch bar for Windows 10 &amp; 11.</b><br />
+  <sub><i>Dynamic Island elegan dan ringan untuk desktop Windows 10 &amp; 11 (Bilingual: English &amp; Bahasa Indonesia).</i></sub>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v2.2.1-111?style=flat-square" alt="Version 2.2.1" />
+  <img src="https://img.shields.io/badge/version-v2.2.2-111?style=flat-square" alt="Version 2.2.2" />
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-111?style=flat-square" alt="Windows 10 and 11" />
   <img src="https://img.shields.io/badge/iOS-IPA-111?style=flat-square" alt="iOS Sideload IPA" />
   <img src="https://img.shields.io/badge/Android-APK-111?style=flat-square" alt="Android APK" />
   <img src="https://img.shields.io/badge/license-GPL--3.0-111?style=flat-square" alt="GPL-3.0" />
   <img src="https://img.shields.io/badge/theme-Monochrome%20%7C%20Color-111?style=flat-square" alt="Themes" />
-  <img src="https://img.shields.io/badge/i18n-EN%20%7C%20ID-111?style=flat-square" alt="Bilingual" />
+  <img src="https://img.shields.io/badge/i18n-EN%20%7C%20ID-111?style=flat-square" alt="Bilingual English & Indonesian" />
 </p>
 
 <p align="center">
   <a href="https://github.com/carissadarmafissaleha/narra-notch/releases/latest"><b>Download Installer</b></a>
   &nbsp;·&nbsp;
+  <a href="#installation--windows-security"><b>Install &amp; Smart App Control</b></a>
+  &nbsp;·&nbsp;
   <a href="#showcase--gallery"><b>Gallery</b></a>
   &nbsp;·&nbsp;
-  <a href="#key-features"><b>Features</b></a>
+  <a href="#key-features"><b>Features / Fitur</b></a>
   &nbsp;·&nbsp;
-  <a href="#quick-start--controls"><b>Using it</b></a>
+  <a href="#quick-start--controls"><b>Quick Start</b></a>
   &nbsp;·&nbsp;
   <a href="#development"><b>Development</b></a>
   &nbsp;·&nbsp;
-  <a href="#credits--license"><b>Credits & License</b></a>
+  <a href="#credits--license"><b>Credits</b></a>
 </p>
 
 <p align="center">
@@ -34,15 +37,55 @@
 
 ---
 
-A native, lightweight Dynamic Island sitting discreetly at the top of your Windows desktop. It stays out of your way until you need it, expanding seamlessly on hover, click, or hotkey (**Ctrl + Alt + Space**).
+**English:** A native, lightweight Dynamic Island sitting discreetly at the top of your Windows desktop. It stays out of your way until you need it, expanding seamlessly on hover, click, or hotkey (**Ctrl + Alt + Space**). Crafted with **custom themes** (pure black Monochrome and Color theme with adaptive accent hues), crisp Phosphor vector icons, and full **bilingual localization** (English &amp; Bahasa Indonesia).
 
-Crafted with **custom themes** (pure black Monochrome and vibrant Color theme with adaptive accent hues), crisp Phosphor vector icons, and full **bilingual localization** (English and Bahasa Indonesia).
+**Bahasa Indonesia:** Dynamic Island ringan dan native yang terpasang rapi di bagian atas layar Windows. Tetap tersembunyi saat tidak dibutuhkan, lalu mengembang mulus ketika disentuh kursor, diklik, atau dengan shortcut (**Ctrl + Alt + Space**). Hadir dengan **tema kustom** (Monochrome hitam pekat &amp; tema Color dengan aksen warna adaptif), ikon vektor Phosphor yang tajam, serta antarmuka **dwibahasa** (Inggris &amp; Indonesia).
+
+---
+
+## 📦 Installation & Windows Security
+
+> Read this before installing or updating on Windows 10 &amp; 11.<br />
+> *Baca panduan ini sebelum memasang atau memperbarui aplikasi di Windows 10 &amp; 11.*
+
+### ⬇️ Download Links / Unduhan
+
+- **Windows 10 / 11 Installer**: Download `narra-notch_2.2.2_x64-setup.exe` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest) (no admin rights required).
+- **Android Companion**: Download `narra-notch_2.2.2_android.apk` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest).
+- **iOS Companion**: Sideload `narra-notch_2.2.2_ios.ipa` via AltStore / SideStore / Scarlet / TrollStore.
+
+---
+
+### 🛡️ Why Does Windows SmartScreen or Smart App Control Warn / Block?
+### *Kenapa Muncul Peringatan Windows SmartScreen atau Smart App Control?*
+
+| English | Bahasa Indonesia |
+| --- | --- |
+| **Why it happens:** `narra-notch` is a free, open-source app distributed without a commercial EV/OV **Authenticode Code Signing Certificate** (which requires expensive annual verification). Every binary is compiled transparently from public source via [GitHub Actions](.github/workflows/release.yml) — it is **not** malware. | **Penyebabnya:** `narra-notch` adalah proyek open-source gratis yang belum memakai **sertifikat digital berbayar (Authenticode EV/OV Code Signing)**. Setiap file `.exe` di-build langsung secara terbuka oleh [GitHub Actions](.github/workflows/release.yml) — bukan virus atau malware. |
+| **Why newer releases can be stricter:** Freshly compiled binaries have zero download reputation on Microsoft's cloud graph yet, so newly pushed versions (`v2.2.1+`) may be flagged more strictly than older builds that had fewer Windows reputation checks, or block the **in-app auto-updater**. | **Kenapa versi baru bisa lebih ketat diblokir:** Setiap build `.exe` baru dianggap file asing oleh cloud Microsoft karena reputasi unduhannya masih nol. Itu sebabnya installer versi baru atau proses **klik Update langsung di dalam aplikasi** bisa diblokir oleh Windows. |
+
+#### Case 1: Windows Defender SmartScreen (*"Windows protected your PC"*)
+- **English**: Click **More info** → click **Run anyway** to start the installer.
+- **Bahasa Indonesia**: Klik **Info selengkapnya (More info)** → klik **Tetap jalankan (Run anyway)** untuk melanjutkan instalasi.
+
+#### Case 2: Windows 11 Smart App Control (*"Smart App Control blocked an app that may be unsafe"*)
+When Windows 11 **Smart App Control** is active (**On** instead of *Evaluation* or *Off*), Windows blocks **all unsigned `.exe` installers**, including both manual setups and in-app updates (**Settings → General → Updates**).
+
+- **Option A — Build From Source (Recommended if Smart App Control is On)**
+  - **EN**: Keep Windows Smart App Control enabled and compile locally on your PC: run `npm install` then `npx tauri build` (see [Development](#development)).
+  - **ID**: Agar Smart App Control tetap aktif aman, lakukan build lokal langsung dari source code: jalankan `npm install` lalu `npx tauri build` (lihat bagian [Development](#development)).
+- **Option B — Manual Update When In-App Update Is Blocked**
+  - **EN**: If clicking **Update** inside the app is blocked or fails to launch, download the latest `*_x64-setup.exe` directly from [Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest), right-click the file → **Properties** → check **Unblock** (if shown) → **Apply**, then run it.
+  - **ID**: Jika tombol **Update** di dalam aplikasi tidak merespons atau diblokir, unduh installer `*_x64-setup.exe` langsung dari halaman [Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest), klik kanan file → **Properties** → centang **Unblock** (bila muncul) → **OK**, lalu jalankan.
+- **Option C — About Turning Off Smart App Control**
+  - **EN**: You can inspect its mode in **Windows Security → App &amp; browser control → Smart App Control**. Please note Microsoft's rule: once switched to **Off**, Smart App Control **cannot be turned back on** without resetting/reinstalling Windows. Choose Option A (build from source) if you want to keep it enabled.
+  - **ID**: Statusnya bisa dicek di **Windows Security → App &amp; browser control → Smart App Control**. Perlu dicatat aturan Windows 11: jika Smart App Control diubah menjadi **Off**, fitur ini **tidak dapat diaktifkan kembali** tanpa reset/instal ulang Windows. Pilih **Opsi A (Build dari Source)** bila ingin tetap mengaktifkannya.
 
 ---
 
 ## Showcase & Gallery
 
-### 🏝️ Dynamic Island States (Closed Notch)
+### 🏝️ Dynamic Island States (Closed Notch / Tampilan Notch Tertutup)
 
 <table align="center">
   <tr>
@@ -61,30 +104,30 @@ Crafted with **custom themes** (pure black Monochrome and vibrant Color theme wi
 
 ---
 
-## Key Features
+## Key Features / Fitur Utama
 
-### 🤖 Coding Agent Companion (Mochi, Antigravity & OpenCode)
-Seamless companion for Google DeepMind's Antigravity (`agy`), OpenCode, and AI coding agents:
-- **OpenCode Integration**: Install the OpenCode plugin in one click from Settings; the notch and iPhone/PWA then track OpenCode sessions live and relay **Allow / Always / Deny** decisions straight back to the terminal.
-- **OpenCode Inside the Notch**: A dedicated **OpenCode** tab mirrors the active session — your prompt, the agent's text, collapsible reasoning and every tool call. Start a **new session**, switch **agent** (Build, Plan, …) or **model**, reply, and stop a running turn without leaving the notch. The OpenCode password stays on the PC; the phone asks the notch.
-- **Approvals Without Editing Config**: The plugin adds session-scoped `ask` rules for shell commands and file edits, so you do not have to touch `opencode.json`. Turn it off in Settings → Coding Agent, or keep your own `deny` rules — they still win.
-- **Chosen Outfit Survives Restarts**: The Mochi outfit selected on desktop or on the phone is kept in sync, so a desktop restart no longer resets the companion to its default look.
-- **Authentic AGY CLI Braille Indicator**: Authentic rotating Braille dots spinner (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`) that rotates during active tasks and stays stationary when idle.
-- **Dedicated Interactive Chat Tabs (Desktop Notch & Mobile PWA)**: Clean tab navigation between `[ Overview ]`, `[ Chat ]`, and `[ Diff ]`, giving conversations a distraction-free full-height workspace.
-- **One-Click Clear Chat & Improved Drawer**: Instant chat clearing (`Trash` icon) with confirmation and an unclipped full-height chat history drawer.
-- **Coucou Mascot & Rich Gestures (`BotEngine`)**:
-  - Auto greeting peek-wave (`👋 greet`) upon load.
-  - Interactive touch & swipe: tap once for random playful emotes (love, proud, wink), swipe horizontally to somersault roll 360°, swipe up to jump bounce with star particles, swipe down to duck.
-  - Full celebratory roll protection: task complete animations finish completely without flickering.
-  - Gentle debounced audio chimes: sounds play only on start, edit, bash, and done (`read` sounds silenced).
-  - Synchronized wardrobe outfit selection persisting across refreshes and devices.
-- **Interactive Tool Approval & Review**: Automatic popup in notch even when Antigravity is minimized. Review critical commands, questions, and plan feedback with instant **`Y`** (Allow), **`N`** (Deny), and **`A`** (Always) shortcuts.
-- **Syntax-Colored Code Diff & Stepper**: Live diff inspection with additions, deletions, step tracking (*Read, Edit, Bash, Done*), and relocated command target view.
+### 🤖 Coding Agent Companion (Mochi, Antigravity &amp; OpenCode)
+
+**English:** Seamless companion for Google DeepMind's Antigravity (`agy`), OpenCode, and AI coding agents:
+- **OpenCode Integration &amp; Inside the Notch**: Install the OpenCode plugin in one click from Settings. A dedicated **OpenCode** tab mirrors the active session (prompts, collapsible reasoning, tool calls, **Allow / Always / Deny** decisions), lets you start a **new session**, switch **agent** (Build, Plan, …) or **model**, reply, and stop turns — with the OpenCode password staying safely on the PC.
+- **Antigravity &amp; OpenCode UI Parity (`v2.2.2`)**: Unified chat layout across both Antigravity and OpenCode tabs with live **Model** and **Effort** selectors detected directly from the desktop runtime (`/api/models`).
+- **Approvals Without Editing Config**: Adds session-scoped `ask` rules for shell commands and file edits without touching `opencode.json`.
+- **Authentic AGY CLI Braille Indicator**: Rotating Braille dots spinner (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`) during active tasks.
+- **Coucou Mascot &amp; Rich Gestures (`BotEngine`)**: Auto greeting wave, interactive touch/swipe emotes (love, proud, wink, 360° roll, bounce), debounced chimes, and synchronized wardrobe outfits persisting across desktop &amp; mobile restarts.
+- **Interactive Tool Approval &amp; Live Diff**: Automatic approval popup even when Antigravity is minimized with instant **`Y`** (Allow), **`N`** (Deny), and **`A`** (Always) shortcuts, plus syntax-colored Git diff inspection.
+
+**Bahasa Indonesia:** Pendamping terpadu untuk Google DeepMind Antigravity (`agy`), OpenCode, dan agent coding AI:
+- **Integrasi OpenCode di Dalam Notch**: Pasang hooks OpenCode sekali klik dari Pengaturan. Tab **OpenCode** menampilkan transkrip sesi secara live (prompt, reasoning lipat, pemanggilan tool, serta konfirmasi **Allow / Always / Deny**), buat **sesi baru**, ganti **agent** / **model**, balas chat, dan hentikan agent tanpa meninggalkan notch. Password OpenCode tetap aman di PC.
+- **Keselarasan Chat Antigravity &amp; OpenCode (`v2.2.2`)**: Antarmuka chat Antigravity kini seragam dengan OpenCode lengkap dengan pemilih **Model** dan **Effort** sesuai model aktif yang terdeteksi (`/api/models`).
+- **Approval Tanpa Ubah Config**: Menambahkan aturan `ask` khusus sesi untuk perintah shell &amp; edit file tanpa mengubah `opencode.json`.
+- **Indikator Braille AGY CLI**: Spinner Braille berputar (`⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏`) saat agent bekerja aktif.
+- **Maskot Mochi &amp; Gestur Interaktif**: Sapaan otomatis saat dimuat, sentuh/swipe untuk emote, lompat &amp; salto 360°, suara halus tanpa spam, serta kostum Wardrobe yang tersinkronisasi antara desktop dan HP.
+- **Review Perintah &amp; Live Diff**: Popup persetujuan otomatis lengkap dengan shortcut **`Y`** (Allow), **`N`** (Deny), **`A`** (Always) dan inspeksi Git Diff berwarna.
 
 <table align="center">
   <tr>
     <td align="center"><b>Mascot Overview (Idle)</b></td>
-    <td align="center"><b>Active Task & Braille Spinner</b></td>
+    <td align="center"><b>Active Task &amp; Braille Spinner</b></td>
   </tr>
   <tr>
     <td><img src="docs/media/08-coding-agent-idle.png" alt="Coding Agent Mascot Idle View" width="420" /></td>
@@ -108,17 +151,19 @@ Seamless companion for Google DeepMind's Antigravity (`agy`), OpenCode, and AI c
 
 ---
 
-### 📱 Mobile Companion (`CodingAgent` for iOS, Android & PWA)
-Control your desktop coding agent remotely from your iPhone or Android phone via local Wi-Fi:
-- **Native iOS & Android Apps**: Download `.ipa` (iOS sideload) or `.apk` (Android directly) from the Releases page, or use as a browser PWA.
-- **Pairing Code Lock**: Create an 8-character code in Settings and type it once on the phone. Until you create one the server stays open, so an older phone build keeps working.
-- **OpenCode Tab on the Phone**: Read the live transcript and start sessions or switch agent/model from the phone too — the OpenCode password never leaves the PC.
-- **Remote Tool Approvals with Action Buttons**: Review shell commands, file diffs, and approve or deny execution directly from system notification banners (**Allow**, **Always**, **Deny**) or the interactive Mochi screen.
-- **Notification Sounds & Haptics**: Full audio and vibration alerts on both iOS and Android when an agent requires approval or finishes its task.
-- **Real-Time Synchronized Outfits**: Mochi's wardrobe updates live across desktop and mobile companion.
-- **Dark & Light Mode**: A sun/moon switch in the companion header; the choice is remembered. The Windows notch stays pure black.
-- **Dedicated Mobile Dock Navigation**: Fluid bottom dock with spring-animated active pill indicator (`Terminal` → `Diff` → `Antigravity` → `OpenCode`), auto-resizing smoothly when chat tabs are toggled.
-- **Full Touch Gestures & PWA Caching**: Viewport-locked momentum scrolling, real-time Server-Sent Events (SSE), and audio notifications.
+### 📱 Mobile Companion (`CodingAgent` for iOS, Android &amp; PWA)
+
+**English:** Control your desktop coding agent remotely from your iPhone or Android phone over local Wi-Fi:
+- **Liquid Glass UI (`glisse`)**: Upgraded in `v2.2.2` with Apple-style Liquid Glass `TabBar` (spring lens refraction), `SegmentedControl`, `Switch` toggles, and glass header buttons.
+- **Dynamic Mascot-Synced Inner Gradient**: Clean borderless sheet with a subtle top inner gradient that shifts live with Mochi's state color (idle, working, approval amber, finished green), plus compact `Connected` pill beside the header and **About** info inside Settings.
+- **Strict 8-Character Pairing Gate &amp; Instant Sync**: Pairing code protects chat, history, file upload, and `/api/models` endpoints cleanly; launching or resuming the mobile app automatically resyncs state from PC.
+- **Remote Approvals, Diffs, OpenCode &amp; Wardrobe**: Approve/deny tool calls from notifications or UI, attach files in chat, and switch Mochi outfits from a compact Settings dropdown.
+
+**Bahasa Indonesia:** Kendalikan coding agent PC dari jarak jauh lewat iPhone atau Android melalui Wi-Fi lokal:
+- **Desain Liquid Glass (`glisse`)**: Diperbarui di `v2.2.2` menggunakan `TabBar` Liquid Glass ala iOS dengan animasi *spring* &amp; lensa geser, `SegmentedControl` tema, `Switch`, dan tombol kaca.
+- **Inner Gradient Sinkron Maskot**: Area bawah tanpa garis outline kaku, digantikan *inner gradient* yang warnanya berubah otomatis mengikuti status maskot Mochi, lengkap dengan badge `Connected` ringkas di sebelah header serta info versi **About** di bawah Pengaturan.
+- **Kunci Pairing 8-Karakter &amp; Sinkron Otomatis**: Semua endpoint chat, riwayat, upload, dan `/api/models` terlindungi kode pairing 8-karakter; membuka atau kembali ke app di HP langsung menyinkronkan status terbaru tanpa perlu mengetik ulang IP.
+- **Approval Jarak Jauh, Diff, Chat &amp; Wardrobe**: Setujui/tolak perintah dari notifikasi maupun layar HP, kirim lampiran file di chat, dan pilih kostum Mochi lewat dropdown praktis di Pengaturan.
 
 <table align="center">
   <tr>
@@ -142,7 +187,7 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
     <td><img src="docs/media/pwa-05-diff.png" alt="PWA Live Code Diff" width="260" /></td>
   </tr>
   <tr>
-    <td colspan="3" align="center"><b>Settings & Wardrobe Outfits</b></td>
+    <td colspan="3" align="center"><b>Settings &amp; Wardrobe Outfits</b></td>
   </tr>
   <tr>
     <td colspan="3" align="center"><img src="docs/media/pwa-06-wardrobe.png" alt="PWA Wardrobe Outfits" width="360" /></td>
@@ -151,10 +196,9 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### 🎵 Now Playing & Live Synchronized Karaoke Lyrics (`lrclib.net`)
-- **Universal Player Compatibility**: Real-time media session tracking across Spotify, Apple Music, YouTube Music, and web browsers.
-- **Synced Karaoke Stream**: 3-line synced lyrics with active line highlighting and marquee scrolling for long lines.
-- **Audio Equalizer**: Real-time visualizer driven by system audio activity.
+### 🎵 Now Playing &amp; Live Synchronized Karaoke Lyrics (`lrclib.net`)
+- **EN**: Real-time media tracking (Spotify, Apple Music, YouTube Music, browsers), 3-line synced karaoke lyrics, and live audio equalizer.
+- **ID**: Pelacakan pemutar media real-time, lirik karaoke 3 baris tersinkronisasi, dan visualizer audio equalizer.
 
 <p align="center">
   <img src="docs/media/11-now-playing.png" alt="Now Playing Media Player" width="850" />
@@ -165,10 +209,9 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### 🕌 Prayer Times (Jadwal Sholat — Standar Kemenag RI)
-- **Kemenag RI Standard**: Accurate astronomical calculation based on *Hisab Rukyat Kementerian Agama Republik Indonesia (SIHAT / MABIMS)* (`Subuh -20°`, `Isya -18°`, `WIB / WITA / WIT`).
-- **Interactive Sun Arc**: Visual trajectory of the sun from Subuh to Isya with active prayer checkpoint indicators.
-- **Closed Notch Pill Banner**: Dynamic alert when prayer time enters with 1-click dismiss button.
+### 🕌 Prayer Times / Jadwal Sholat (Standar Kemenag RI)
+- **EN**: Astronomical calculations matching *Kemenag RI (SIHAT / MABIMS)* (`Subuh -20°`, `Isya -18°`, `WIB / WITA / WIT`), interactive sun arc, and closed-notch prayer alerts.
+- **ID**: Perhitungan hisab akurat standar *Kementerian Agama RI (SIHAT / MABIMS)*, busur matahari interaktif dari Subuh ke Isya, dan banner pengingat waktu sholat di notch tertutup.
 
 <p align="center">
   <img src="docs/media/05-prayer-times.png" alt="Prayer Times Sun Arc" width="850" />
@@ -176,10 +219,9 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### 💧 Water Reminder (Pengingat Hidrasi Harian)
-- **Smart Hydration Engine**: Bottle size configuration (500 ml), daily goal (1.5 L – 3.0 L), and waking active hours.
-- **15-Minute Micro-Sip Scheduler**: Timely, gentle prompts during active hours to stay hydrated throughout the day.
-- **Circular Progress Ring**: Real-time progress display with quick *Minum / Drink* action.
+### 💧 Water Reminder / Pengingat Minum Air
+- **EN**: Configurable bottle size (500 ml), daily target (1.5 L – 3.0 L), 15-minute micro-sip scheduler, and circular progress ring.
+- **ID**: Atur ukuran botol (500 ml), target harian (1,5 L – 3,0 L), jadwal pengingat tegukan tiap 15 menit pada jam aktif, serta indikator progres melingkar.
 
 <p align="center">
   <img src="docs/media/06-water-reminder.png" alt="Water Reminder View" width="850" />
@@ -188,9 +230,8 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 ---
 
 ### 💬 WhatsApp on Dynamic Island
-- **Direct Chat Without Saving Contacts**: Message any international number instantly (`+62`, `+60`, `+65`, `+1`, etc.).
-- **Dual Launcher**: Open chats directly in **WhatsApp Desktop** (`whatsapp://`) or in browser WhatsApp Web.
-- **0 MB Idle RAM Web Companion**: Mini web view with complete memory release upon closing.
+- **EN**: Start direct chats with any international number (`+62`, `+60`, `+65`, `+1`, etc.) without saving contacts, via WhatsApp Desktop or WhatsApp Web (`0 MB` idle RAM).
+- **ID**: Kirim pesan langsung ke nomor mana pun tanpa perlu menyimpan kontak lewat WhatsApp Desktop atau WhatsApp Web dengan konsumsi RAM `0 MB` saat idle.
 
 <p align="center">
   <img src="docs/media/07-whatsapp.png" alt="WhatsApp Companion View" width="850" />
@@ -198,11 +239,11 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### ⏱️ Productivity Suite: Timers, Todos, Notes & Shelf
+### ⏱️ Productivity Suite: Timers, Todos, Notes, Shelf &amp; Tools
 
 <table align="center">
   <tr>
-    <td align="center"><b>Timer & Stopwatch</b></td>
+    <td align="center"><b>Timer &amp; Stopwatch</b></td>
     <td align="center"><b>Todo Tasks</b></td>
   </tr>
   <tr>
@@ -226,8 +267,8 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
     <td><img src="docs/media/18-ai-ask.png" alt="AI Ask" width="420" /></td>
   </tr>
   <tr>
-    <td align="center"><b>Unit & Currency Converter</b></td>
-    <td align="center"><b>Trading & Crypto Portfolio</b></td>
+    <td align="center"><b>Unit &amp; Currency Converter</b></td>
+    <td align="center"><b>Trading &amp; Crypto Portfolio</b></td>
   </tr>
   <tr>
     <td><img src="docs/media/19-converter.png" alt="Converter" width="420" /></td>
@@ -237,11 +278,11 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### 📊 System Diagnostics, Hardware HUD & Vault
+### 📊 System Diagnostics, Hardware HUD &amp; Vault
 
 <table align="center">
   <tr>
-    <td align="center"><b>AI Quota & Usage Monitor</b></td>
+    <td align="center"><b>AI Quota &amp; Usage Monitor</b></td>
     <td align="center"><b>Weather Forecast</b></td>
   </tr>
   <tr>
@@ -257,7 +298,7 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
     <td><img src="docs/media/24-discord.png" alt="Discord Presence" width="420" /></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><b>Password Vault & 2FA Authenticator (Windows Hello)</b></td>
+    <td colspan="2" align="center"><b>Password Vault &amp; 2FA Authenticator (Windows Hello)</b></td>
   </tr>
   <tr>
     <td colspan="2" align="center"><img src="docs/media/25-vault-passwords.png" alt="Password Vault & 2FA" width="600" /></td>
@@ -266,11 +307,10 @@ Control your desktop coding agent remotely from your iPhone or Android phone via
 
 ---
 
-### ⚙️ Settings & Customization
-Fine-tune notch proportions, theme aesthetics, and tool integrations:
-- **Display Settings**: Choose themes (*pure black Monochrome* or *Color with 8 adaptive accent hues*), set notch scale (*80%, 100%, 120%*), and adjust alignment.
-- **Tools Manager**: Toggle active utilities on and off on demand.
-- **Coding Agent Settings**: Configure Mochi mascot, cursor pupil tracking, seasonal outfits, and audio volume.
+### ⚙️ Settings &amp; Customization / Pengaturan &amp; Kustomisasi
+- **Display Settings / Tampilan**: Monochrome pure black or Color theme with 8 adaptive accent hues, 80% / 100% / 120% scale, and alignment.
+- **Tools Manager / Kelola Alat**: Toggle active utilities on demand.
+- **Coding Agent Settings**: Configure Mochi pupil tracking, wardrobe outfits, OpenCode hooks, pairing code, and notification volume.
 
 <table align="center">
   <tr>
@@ -291,102 +331,63 @@ Fine-tune notch proportions, theme aesthetics, and tool integrations:
 
 ---
 
-## Quick Start & Controls
+## Quick Start &amp; Controls / Panduan Cepat
 
-| Action | How |
-| --- | --- |
-| **Open / Close** | Hover over the notch, click, or press **Ctrl + Alt + Space** |
-| **Reset on Close** | Automatically returns to **Overview (Ikhtisar)** whenever closed from Settings |
-| **Restart App** | Right-click the system tray icon and select **Mulai Ulang (Restart)** |
-| **Notch Mode** | Right-click the system tray icon to switch **Normal** ⇄ **Line** mode |
-| **Switch Tabs** | Click the top navigation bar or **scroll mouse wheel** over icons |
-| **Move Notch** | Drag horizontally by its header or while closed |
-| **Focus Mode** | Click the focus button in header or select from the tray menu |
-| **File Parking** | Drag and drop any file onto the notch |
-| **Theme & Display** | Choose **Monochrome** or **Color** (8 accents) in Settings → Display |
-| **Resize Notch** | Choose **80%**, **100%**, or **120%** scale in Settings → Display |
-| **Language** | Switch between **English** and **Bahasa Indonesia** in Settings → General |
-| **OpenCode Tab** | Open **Coding Agent → OpenCode** to read the live transcript; type a reply, or press **Stop** while a turn is running |
-| **New OpenCode Session** | Click **+** in the OpenCode tab; the new session inherits the current project folder, agent and model |
-| **Switch Agent / Model** | Tap the **agent** or **model** chip under the OpenCode header; the model picker has a search box |
-| **OpenCode Approvals** | Install the plugin and keep **OpenCode approvals** on in Settings → Coding Agent |
-| **Pair a Phone** | Settings → Coding Agent → **Phone pairing code** → **Create code**, then type the 8 characters once on the phone |
-| **Phone / PWA** | Copy the companion URL in Settings → Coding Agent, open it on your phone (same Wi-Fi), then enter the pairing code |
-| **Mochi Outfit** | Coding Agent → **Wardrobe**; the choice syncs to the phone and survives restarts |
+| Action | English | Bahasa Indonesia |
+| --- | --- | --- |
+| **Open / Close** | Hover over the notch, click, or press **Ctrl + Alt + Space** | Arahkan kursor, klik, atau tekan **Ctrl + Alt + Space** |
+| **Reset on Close** | Returns to **Overview** automatically when closed from Settings | Otomatis kembali ke **Ikhtisar** saat ditutup dari Pengaturan |
+| **Restart App** | Right-click tray icon → **Restart** | Klik kanan ikon tray → **Mulai Ulang (Restart)** |
+| **Notch Mode** | Right-click tray icon → toggle **Normal** ⇄ **Line** | Klik kanan ikon tray → ganti mode **Normal** ⇄ **Line** |
+| **Switch Tabs** | Click header bar or scroll mouse wheel over icons | Klik ikon tab atas atau scroll mouse di atas ikon |
+| **Move / Resize / Theme** | Drag header horizontally; configure theme &amp; scale in **Settings → Display** | Geser header secara horizontal; atur tema &amp; skala di **Pengaturan → Tampilan** |
+| **Language** | Switch **English** / **Bahasa Indonesia** in **Settings → General** | Pilih **English** / **Bahasa Indonesia** di **Pengaturan → Umum** |
+| **OpenCode &amp; Approvals** | **Settings → Coding Agent → Install Hooks (1-Click)**, keep **OpenCode approvals** on; approve with **Y / A / N** | **Pengaturan → Coding Agent → Pasang Hooks (1-Klik)**, biarkan **Izin OpenCode** aktif; setujui dengan **Y / A / N** |
+| **Pair a Phone** | **Settings → Coding Agent → Phone pairing code → Create code**, enter the 8 characters once on mobile | **Pengaturan → Coding Agent → Kode pairing HP → Buat**, lalu masukkan 8 karakter itu sekali di HP |
+| **Mobile Companion / PWA** | Connect to the same Wi-Fi, open the companion URL or install APK/IPA | Hubungkan PC &amp; HP ke Wi-Fi yang sama, buka URL companion di browser HP / pasang APK atau IPA |
+| **Mochi Outfit** | Change in **Coding Agent → Wardrobe** or Mobile **Settings → Outfit** (auto-synced) | Pilih di **Coding Agent → Wardrobe** atau **Pengaturan → Outfit** di HP (tersinkronisasi otomatis) |
+
+### OpenCode Approvals &amp; Inside the Notch — Detailed Guide
 
 <details>
-<summary><b>Cara pakai singkat (Bahasa Indonesia)</b></summary>
+<summary><b>English Guide: OpenCode &amp; Mobile Companion Setup</b></summary>
 
-- **Buka / tutup notch**: arahkan kursor, klik, atau tekan **Ctrl + Alt + Space**.
-- **Pindah tab**: klik ikon di bar atas, atau scroll mouse di atas ikon.
-- **Ukuran & tema**: **Pengaturan → Tampilan** (Monokrom/Warna, skala 80/100/120%).
-- **Izin OpenCode**: **Pengaturan → Coding Agent** → klik **⚡ Pasang Hooks (1-Klik)** sekali, lalu biarkan **Izin OpenCode** aktif. Sebelum perintah shell atau edit file dijalankan, notch (dan HP bila terhubung) akan meminta konfirmasi: **Allow / Always / Deny** — atau tombol **Y / A / N**. Tidak perlu mengubah `opencode.json`.
-- **HP / PWA**: sambungkan HP dan PC ke Wi-Fi yang sama, buka **Pengaturan → Coding Agent → Mobile Companion**, salin URL, lalu buka di Safari/Chrome dan pilih **Add to Home Screen**.
-- **Tab OpenCode**: buka **Coding Agent → OpenCode**. Isinya transkrip sesi aktif: pesanmu di kanan, jawaban agent dan reasoning di kiri (klik untuk membuka), plus setiap tool yang dipanggil. Balas dari kotak bawah (**Enter** kirim, **Shift + Enter** baris baru), atau tekan **Hentikan** saat agent masih jalan.
-- **Sesi OpenCode baru**: klik **+** di tab OpenCode. Sesi baru ikut folder proyek, agent, dan model sesi yang sedang tampil, jadi tidak perlu pindah ke jendela OpenCode.
-- **Ganti agent / model**: klik chip **agent** atau **model** di bawah header tab OpenCode. Model punya kolom pencarian; daftarnya mengikuti model yang aktif di OpenCode.
-- **Pairing HP**: **Pengaturan → Coding Agent → Kode pairing HP → Buat**, lalu masukkan 8 karakter itu sekali di HP. Kalau kode salah, HP menampilkan pesan yang jelas. **Kode baru** mengeluarkan semua HP, **Matikan kunci** membuka server lagi. Selama belum ada kode, server tetap terbuka supaya build HP lama masih bisa dipakai.
-- **Outfit Mochi**: pilih di **Coding Agent → Wardrobe**. Pilihan tersimpan di desktop dan HP, jadi tidak hilang lagi setelah aplikasi ditutup dan dibuka kembali.
-- **Daftar pengaturan panjang**: halaman Pengaturan sekarang lebih besar dan punya scrollbar tipis di sisi kanan. Geser ke bawah untuk melihat sisanya.
+1. **OpenCode Approvals**: Open **Settings → Coding Agent**, click **⚡ Install Hooks (1-Click)** once, and keep **OpenCode approvals** on. The plugin adds session-scoped `ask` rules for `shell` and `edit` without modifying `opencode.json`.
+2. **OpenCode Inside the Notch**: Open **Coding Agent → OpenCode** to view the live session transcript, switch between **Build / Plan** agents or detected **Models** (with **Effort** levels), start new sessions (`+`), attach files, reply (**Enter**), or interrupt turns (**Stop**).
+3. **Mobile Companion Pairing**: Connect PC and phone to the same Wi-Fi, install `.apk` / `.ipa` or add the web companion URL to Home Screen, then enter the 8-character pairing code generated in **Settings → Coding Agent → Phone pairing code**. If a badge stays amber (`Pairing`), tap the badge in the header to re-enter the code. **New code** signs out all devices; **Turn off lock** reopens LAN access.
 
 </details>
 
-### OpenCode Approvals — How It Works
+<details>
+<summary><b>Panduan Bahasa Indonesia: OpenCode &amp; Pengaturan Companion HP</b></summary>
 
-1. Open **Settings → Coding Agent**.
-2. Click **⚡ Install Hooks (1-Click)** once. The plugin updates itself after app updates.
-3. Leave **OpenCode approvals** on (default).
-4. Use OpenCode normally. Before a shell command or file edit, the notch — and the phone, if connected — shows the request.
-5. Choose **Allow** (once), **Always** (for the rest of the session), or **Deny**. In the notch you can also press **Y**, **A**, or **N**.
-6. Turn the switch off to return to OpenCode's normal allow-all policy.
+1. **Izin Perintah OpenCode**: Buka **Pengaturan → Coding Agent**, klik **⚡ Pasang Hooks (1-Klik)** satu kali, lalu biarkan **Izin OpenCode** aktif. Plugin otomatis memasang aturan `ask` per sesi untuk `shell` dan `edit` tanpa mengubah `opencode.json`.
+2. **Tab Chat Antigravity &amp; OpenCode**: Buka **Coding Agent → Antigravity / OpenCode** untuk melihat transkrip live, mengganti **Agent** atau **Model &amp; Effort**, membuat sesi baru (`+`), melampirkan file, membalas (**Enter**), atau menghentikan proses (**Stop**).
+3. **Pairing Companion HP**: Pastikan HP &amp; PC terhubung ke Wi-Fi yang sama, pasang file `.apk` / `.ipa` atau buka URL companion di Safari/Chrome (**Add to Home Screen**). Buat **Kode pairing HP** (8 karakter) di Pengaturan desktop dan masukkan di layar pairing HP. Bila status badge masih amber, ketuk badge tersebut untuk mengetik ulang kode. Klik **Kode baru** untuk mengeluarkan semua perangkat atau **Matikan kunci** untuk akses terbuka.
 
-The plugin only adds **session-scoped** `ask` rules for `shell` and `edit`. Your `opencode.json` is never modified, an explicit `deny` in your own rules still wins, and when narra-notch is not running the plugin fails fast so OpenCode keeps its usual terminal behaviour.
-
-### OpenCode Inside the Notch
-
-1. Open **Coding Agent → OpenCode**. The tab follows the session the plugin reports; if nothing is running it shows the newest session, so it is never empty.
-2. Read the transcript: your prompt on the right, the agent's text and collapsible reasoning on the left, and every tool call with its state.
-3. Type in the composer and press **Enter** to send (**Shift + Enter** for a new line). Press **Stop** in the header to interrupt a running turn.
-4. Press **+** to start a new session. It opens in the same project folder as the session on screen and inherits its agent and model.
-5. Tap the **agent** chip to switch between **Build** and **Plan**; tap the **model** chip to choose from the models OpenCode has enabled. Type in the picker to search by name, id, or provider.
-6. The same tab exists on the phone. The phone never receives the OpenCode password: it calls the notch, and the notch calls OpenCode.
-
-> The tab reads the same HTTP API as the OpenCode web UI. If the notch says OpenCode is not running, open OpenCode on the PC once and refresh.
-
-### Mobile Companion (iOS, Android & PWA)
-
-1. Connect your phone and PC to the **same Wi-Fi network**.
-2. **Download App**:
-   - **Android**: Download `narra-notch_<version>_android.apk` directly from the [Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest) page and install.
-   - **iOS**: Sideload `narra-notch_<version>_ios.ipa` via AltStore/SideStore/Scarlet/TrollStore.
-   - **Browser PWA**: On PC go to **Settings → Coding Agent → Mobile Companion**, click **Copy URL**, open in Safari/Chrome on your phone, and select **Add to Home Screen**.
-3. **Pair the phone**: in **Settings → Coding Agent → Phone pairing code**, click **Create code** and type the eight characters on the phone. The phone shows an amber **Pairing** badge until it is accepted.
-4. The companion connects in real-time to show live agent status, tool steps, git diffs, approvals with action buttons, the OpenCode tab, and Mochi's wardrobe outfits.
-5. The Mochi outfit is kept synchronized between desktop and phone automatically.
-
-**If pairing fails:** the badge stays amber and the phone shows *"This phone is not paired with Notch for Windows yet."* Tap the status badge in the phone header, re-enter the eight characters, and press **OK**. **New code** signs every phone out; **Turn off lock** makes the server open again.
+</details>
 
 ---
 
-## Development
+## Development / Pengembangan
 
-Built with **Tauri 2**, **React 19**, **TypeScript**, **Motion**, and **Tailwind CSS 4**. Uses Windows WebView2 for a compact binary without bundling a full browser runtime.
+Built with **Tauri 2**, **React 19**, **TypeScript**, **Motion**, **Glisse**, and **Tailwind CSS 4**. Uses Windows WebView2 for a compact native footprint without bundling Chromium.
 
-### Prerequisites
-- Node.js 22 or newer
+### Prerequisites / Prasyarat
+- Node.js 22+
 - Rust (stable toolchain)
-- Visual Studio Build Tools with the *C++ workload* and *Windows 10/11 SDK*
+- Visual Studio Build Tools (*C++ workload* + *Windows 10/11 SDK*)
 
-### Commands
+### Commands / Perintah
 
 ```powershell
-# Install frontend dependencies
+# Install frontend dependencies / Pasang dependensi frontend
 npm install
 
-# Start Vite dev server in browser (includes fake desktop simulator)
+# Start Vite dev server in browser (includes desktop simulator)
 npm run dev
 
-# Run desktop Tauri application
+# Run desktop Tauri application / Jalankan aplikasi desktop Tauri
 npm run tauri dev
 
 # Type check TypeScript codebase
@@ -394,23 +395,22 @@ npm run typecheck
 
 # Validate i18n translation coverage (English & Indonesian)
 npm run i18n
-```
 
-### Building Standalone Binary
-
-```powershell
-npx tauri build --no-bundle
-# Output executable: src-tauri/target/release/notch.exe
+# Build local standalone installer or executable (bypassing Smart App Control blocks)
+npx tauri build
+# Output installer: src-tauri/target/release/bundle/nsis/narra-notch_*_x64-setup.exe
+# Output binary:    src-tauri/target/release/notch.exe
 ```
 
 ---
 
-## Credits & License
+## Credits &amp; License
 
 Distributed under the [GPL-3.0 License](LICENSE). You may use, study, modify, and share this project under the terms of the GPL-3.0 license.
 
-### Attribution & Sources
+### Attribution &amp; Sources
 - **Coucou**: Mascot character rendering engine (`BotEngine`), sound effects, wardrobe outfits, and coding agent companion concepts ported from [Coucou](https://github.com/louis-cfm/coucou) by Louis CFM ([MIT License](https://github.com/louis-cfm/coucou/blob/main/LICENSE)).
+- **Glisse**: Apple Liquid Glass React UI controls (`TabBar`, `SegmentedControl`, `Switch`, `Button`) from [Glisse](https://github.com/0kzh/glisse) by Kelvin Zhang ([MIT License](https://github.com/0kzh/glisse/blob/main/LICENSE)).
 - **Original Base Project**: Forked and customized from [Linux5Real/L4-Windows-NotchBar](https://github.com/Linux5Real/L4-Windows-NotchBar) (GPL-3.0).
 - **Notch Proportions**: Derived from [NotchDrop](https://github.com/Lakr233/NotchDrop) (MIT).
 - **Lyrics API**: Synchronized lyrics powered by [LRCLIB](https://lrclib.net).

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { Button, SegmentedControl, Switch, TabBar } from "glisse";
 import {
   FileCode,
   ChatCircleDots,
@@ -15,6 +16,8 @@ import {
   Sun,
   GearSix,
   PlugsConnected,
+  TShirt,
+  Info,
 } from "@phosphor-icons/react";
 import {
   agentStore,
@@ -24,13 +27,19 @@ import {
   denyPendingTool,
   refreshGitDiff,
 } from "./store";
+import { agentService } from "../../platform/services";
 import { DiffView } from "./AgentView";
 import { AgentChatBox } from "./AgentChatBox";
 import { OpenCodeSessionView } from "./OpenCodeSessionView";
 import { MochiCanvas } from "./MochiCanvas";
 import { WardrobeView } from "./WardrobeView";
 import { settings, updateSettings } from "../../settings/store";
-import { resolveOutfit, type OutfitSelection } from "./coucou/wardrobe";
+import {
+  resolveOutfit,
+  OUTFIT_SELECTIONS,
+  OUTFIT_KEYS,
+  type OutfitSelection,
+} from "./coucou/wardrobe";
 import { AgyIndicator } from "./AgyIndicator";
 import type { BotEngine } from "./coucou/engine";
 import {
@@ -235,28 +244,54 @@ export function MobileAgentCompanion() {
 
     void syncSettings();
 
+    const syncAgentState = () => {
+      if (isShowcase) return;
+      agentService
+        .getStatus()
+        .then((status) => {
+          if (!alive) return;
+          agentStore.set((prev) => ({
+            ...prev,
+            ...status,
+          }));
+        })
+        .catch(() => {});
+    };
+
     // Connection badge follows a plain HTTP fetch: Android's WebView blocks http
     // EventSource from the https://localhost origin even with mixed content allowed.
     let alive = true;
+    let evtSource: EventSource | null = null;
+
     const ping = () => {
       companionFetch("/api/info")
         .then(async (r) => {
           if (!alive) return;
           setIsConnected(r.ok);
+          if (r.ok) {
+            const info = await r.json().catch(() => null);
+            if (info?.desktopVersion) setDesktopVersion(info.desktopVersion);
+            syncAgentState();
+          }
         })
         .catch(() => { if (alive) setIsConnected(false); });
       void syncSettings();
+      if (evtSource && evtSource.readyState === EventSource.CLOSED && typeof EventSource !== "undefined") {
+        connectSse();
+      }
     };
-    ping();
-    const pingId = window.setInterval(ping, 5000);
 
     // In mobile browser environment, connect to SSE events for real-time live updates
-    if (typeof window !== "undefined" && typeof EventSource !== "undefined") {
-      const evtSource = new EventSource(companionEventUrl("/api/events"));
+    const connectSse = () => {
+      if (typeof window === "undefined" || typeof EventSource === "undefined" || isShowcase) return;
+      evtSource?.close();
+      evtSource = new EventSource(companionEventUrl("/api/events"));
 
       // SSE failing is not fatal: the ping above owns the connection badge.
       evtSource.onopen = () => {
         setIsConnected(true);
+        syncAgentState();
+        void syncSettings();
       };
 
       evtSource.onmessage = async (e) => {
@@ -378,17 +413,29 @@ export function MobileAgentCompanion() {
           }
         } catch {}
       };
+    };
 
-      return () => {
-        alive = false;
-        window.clearInterval(pingId);
-        evtSource.close();
-        disposeActions?.();
-      };
-    }
+    connectSse();
+    ping();
+    const pingId = window.setInterval(ping, 4000);
+
+    const onResume = () => {
+      if (document.visibilityState === "visible") {
+        ping();
+        if (evtSource && evtSource.readyState === EventSource.CLOSED) {
+          connectSse();
+        }
+      }
+    };
+    window.addEventListener("focus", ping);
+    document.addEventListener("visibilitychange", onResume);
+
     return () => {
       alive = false;
       window.clearInterval(pingId);
+      window.removeEventListener("focus", ping);
+      document.removeEventListener("visibilitychange", onResume);
+      evtSource?.close();
       disposeActions?.();
     };
   }, []);
@@ -560,10 +607,19 @@ export function MobileAgentCompanion() {
 
   const diffs = s.diffs || [];
   const hasDiffs = diffs.some((d) => d.hunks.length > 0 || d.tooLarge);
+  const mascotGlow = isApproval
+    ? "rgba(255, 159, 10, 0.16)"
+    : isFinished
+    ? "rgba(48, 209, 88, 0.14)"
+    : isWorking
+    ? "rgba(91, 127, 219, 0.18)"
+    : "rgba(91, 127, 219, 0.09)";
 
   return (
     <div
       onClick={unlockMobileAudio}
+      data-theme={resolvedTheme === "dark" ? "dark" : "light"}
+      style={{ "--m-glow": mascotGlow } as React.CSSProperties}
       className={`ca-mob fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden transition-colors duration-200 ${
         resolvedTheme === "dark" ? "dk" : "mobile-light"
       } ${isApproval ? "am" : ""}`}
@@ -594,30 +650,30 @@ export function MobileAgentCompanion() {
         </div>
 
         {/* Dark / Light Mode Quick Toggle Button beside Settings Gear */}
-        <button
+        <Button
           type="button"
+          variant="glass"
           onClick={toggleThemeQuick}
-          className="ca-ib"
           aria-label={resolvedTheme === "light" ? t("Dunkler Modus") : t("Heller Modus")}
           title={resolvedTheme === "light" ? t("Dunkler Modus") : t("Heller Modus")}
-        >
-          {resolvedTheme === "light" ? (
-            <Moon size={20} weight="bold" />
-          ) : (
-            <Sun size={20} weight="bold" />
-          )}
-        </button>
+          icon={
+            resolvedTheme === "light" ? (
+              <Moon size={18} weight="bold" />
+            ) : (
+              <Sun size={18} weight="bold" />
+            )
+          }
+        />
 
         {/* Settings Sheet Toggle Button */}
-        <button
+        <Button
           type="button"
+          variant={settingsOpen ? "filled" : "glass"}
           onClick={() => setSettingsOpen((prev) => !prev)}
-          className={`ca-ib ${settingsOpen ? "on" : ""}`}
           aria-label={t("Einstellungen")}
           title={t("Einstellungen")}
-        >
-          <GearSix size={20} weight={settingsOpen ? "fill" : "bold"} />
-        </button>
+          icon={<GearSix size={18} weight={settingsOpen ? "fill" : "bold"} />}
+        />
       </header>
 
       {/* ── MOCHI MASCOT STAGE (Preserving all interactive animations & gestures) ── */}
@@ -625,7 +681,7 @@ export function MobileAgentCompanion() {
         <section className="ca-mo shrink-0">
           <div className="relative flex items-center justify-center">
             <MochiCanvas
-              size={195}
+              size={215}
               state={botState}
               outfit={outfit}
               trackCursor={true}
@@ -665,68 +721,74 @@ export function MobileAgentCompanion() {
             <div className="ca-sr">
               <Moon size={20} weight="bold" />
               <b>{t("Appearance")}</b>
-              <div className="ca-seg">
-                <button
-                  type="button"
-                  onClick={() => selectTheme("light")}
-                  className={theme === "light" ? "on" : ""}
-                >
-                  {t("Light")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectTheme("dark")}
-                  className={theme === "dark" ? "on" : ""}
-                >
-                  {t("Dark")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => selectTheme("auto")}
-                  className={theme === "auto" ? "on" : ""}
-                >
-                  {t("Auto")}
-                </button>
-              </div>
+              <SegmentedControl
+                value={theme}
+                onValueChange={(val) => selectTheme(val as "light" | "dark" | "auto")}
+                items={[
+                  { value: "light", label: t("Light") },
+                  { value: "dark", label: t("Dark") },
+                  { value: "auto", label: t("Auto") },
+                ]}
+              />
             </div>
 
-            {/* 2. Wardrobe / Outfit (Same as previous WardrobeView, no body color swatches) */}
-            <div className="ca-sr flex-col items-stretch py-3">
-              <div className="w-full">
-                <WardrobeView mobile />
-              </div>
+            {/* 2. Wardrobe / Outfit (Compact Select Dropdown) */}
+            <div className="ca-sr">
+              <TShirt size={20} weight="bold" />
+              <b>{t("Outfit")}</b>
+              <select
+                value={outfitSelection}
+                onChange={(e) => {
+                  const sel = e.target.value as OutfitSelection;
+                  updateSettings((cur) => ({
+                    ...cur,
+                    codingAgent: { ...cur.codingAgent, mochiOutfit: sel },
+                  }));
+                  try {
+                    localStorage.setItem("mochi:outfit", sel);
+                  } catch {}
+                  companionFetch("/api/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ outfit: sel }),
+                  }).catch(() => {});
+                }}
+                aria-label={t("Outfit")}
+                className="rounded-xl px-3 py-2 text-[13px] font-medium outline-none cursor-pointer"
+                style={{
+                  background: "var(--sh)",
+                  color: "var(--tx)",
+                  border: "1px solid var(--ln)",
+                }}
+              >
+                {OUTFIT_SELECTIONS.map((sel) => (
+                  <option key={sel} value={sel}>
+                    {t(OUTFIT_KEYS[sel])}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 3. Turbo Mode Switch */}
             <div className="ca-sr">
               <Lightning size={20} weight="bold" />
               <b>{t("Mode Turbo")}</b>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={turboEnabled}
+              <Switch
+                checked={turboEnabled}
                 aria-label={t("Mode Turbo")}
-                onClick={toggleTurbo}
-                className="ca-sw"
-              >
-                <i />
-              </button>
+                onCheckedChange={toggleTurbo}
+              />
             </div>
 
             {/* 4. Notifications Switch */}
             <div className="ca-sr">
               {notifEnabled ? <Bell size={20} weight="bold" /> : <BellSlash size={20} weight="bold" />}
               <b>{t("Notifications")}</b>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={notifEnabled}
+              <Switch
+                checked={notifEnabled}
                 aria-label={t("Notifications")}
-                onClick={() => void toggleNotification()}
-                className="ca-sw"
-              >
-                <i />
-              </button>
+                onCheckedChange={() => void toggleNotification()}
+              />
             </div>
 
             {/* 5. Sound Switch */}
@@ -737,16 +799,11 @@ export function MobileAgentCompanion() {
                 <SpeakerSimpleSlash size={20} weight="bold" />
               )}
               <b>{t("Sound")}</b>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={soundEnabled}
+              <Switch
+                checked={soundEnabled}
                 aria-label={t("Sound")}
-                onClick={toggleSound}
-                className="ca-sw"
-              >
-                <i />
-              </button>
+                onCheckedChange={toggleSound}
+              />
             </div>
 
             {/* 6. PC Server Connection */}
@@ -769,8 +826,13 @@ export function MobileAgentCompanion() {
               </button>
             </div>
 
-            <div className="ca-ft">
-              Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"} · Notch {PLATFORM_LABEL} v{APP_VERSION}
+            {/* 7. About */}
+            <div className="ca-sr">
+              <Info size={20} weight="bold" />
+              <b>{t("About")}</b>
+              <span className="text-[11.5px] font-medium opacity-70 text-right">
+                Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"} · Notch {PLATFORM_LABEL} v{APP_VERSION}
+              </span>
             </div>
           </div>
         ) : tab === "overview" ? (
@@ -820,10 +882,6 @@ export function MobileAgentCompanion() {
               >
                 OK
               </button>
-
-              <div className="ca-ft">
-                Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"} · Notch {PLATFORM_LABEL} v{APP_VERSION}
-              </div>
             </div>
           ) : (
             /* ── VIEW: TERMINAL / OVERVIEW & PERMISSION APPROVAL (01, 02, 08, 09) ── */
@@ -931,11 +989,6 @@ export function MobileAgentCompanion() {
                   {commandBoxText}
                 </div>
               )}
-
-              {/* Version Footer */}
-              <div className="ca-ft">
-                Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"} · Notch {PLATFORM_LABEL} v{APP_VERSION}
-              </div>
             </div>
           )
         ) : tab === "chat" && chatEnabled ? (
@@ -1006,121 +1059,65 @@ export function MobileAgentCompanion() {
         </AnimatePresence>
       </main>
 
-      {/* ── BOTTOM DOCK: APPROVAL BUTTONS (When pending approval) OR FLOATING GLASS TAB BAR (.ca-tb) ── */}
+      {/* ── BOTTOM DOCK: APPROVAL BUTTONS (When pending approval) OR GLISSE LIQUID GLASS TAB BAR ── */}
       {isApproval && !settingsOpen && tab === "overview" ? (
         <div className="ca-dock animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <button type="button" onClick={handleDeny} className="ca-bn">
-            <span>{t("Decline")}</span>
-            <kbd>N</kbd>
-          </button>
-          <button type="button" onClick={handleAllow} className="ca-bn pr">
-            <span>{t("Allow")}</span>
-            <kbd>Y</kbd>
-          </button>
-          <button type="button" onClick={() => void handleAlways()} className="ca-bn">
-            <span>{t("Always")}</span>
-            <kbd>A</kbd>
-          </button>
+          <Button type="button" variant="glass" destructive onClick={handleDeny} className="flex-1">
+            {t("Decline")}
+          </Button>
+          <Button type="button" variant="filled" onClick={handleAllow} className="flex-1">
+            {t("Allow")}
+          </Button>
+          <Button type="button" variant="glass" onClick={() => void handleAlways()} className="flex-1">
+            {t("Always")}
+          </Button>
         </div>
       ) : (
-        <nav className="ca-tb" aria-label="Sections">
-          {/* 1. Terminal */}
-          <button
-            type="button"
-            onClick={() => {
+        <div
+          className="fixed left-3 right-3 z-30 flex justify-center pointer-events-none"
+          style={{ bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 10px), 12px)" }}
+        >
+          <TabBar
+            aria-label="Sections"
+            className="pointer-events-auto ca-glisse-tb"
+            value={settingsOpen ? null : tab}
+            onValueChange={(val) => {
               setSettingsOpen(false);
-              setTab("overview");
+              setTab(val as typeof tab);
+              if (val === "diff") void refreshGitDiff();
             }}
-            className={!settingsOpen && tab === "overview" ? "on" : ""}
-          >
-            {!settingsOpen && tab === "overview" && (
-              <motion.div
-                layoutId="ca-mob-tab-indicator"
-                className="absolute inset-0 rounded-[27px] pointer-events-none"
-                style={{ background: "var(--tbo)" }}
-                transition={{ type: "spring", stiffness: 450, damping: 35 }}
-              />
-            )}
-            <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
-              <Terminal size={20} weight={!settingsOpen && tab === "overview" ? "bold" : "regular"} />
-              <span>Terminal</span>
-            </span>
-          </button>
-
-          {/* 2. Diff */}
-          <button
-            type="button"
-            onClick={() => {
-              setSettingsOpen(false);
-              setTab("diff");
-              void refreshGitDiff();
-            }}
-            className={!settingsOpen && tab === "diff" ? "on" : ""}
-          >
-            {!settingsOpen && tab === "diff" && (
-              <motion.div
-                layoutId="ca-mob-tab-indicator"
-                className="absolute inset-0 rounded-[27px] pointer-events-none"
-                style={{ background: "var(--tbo)" }}
-                transition={{ type: "spring", stiffness: 450, damping: 35 }}
-              />
-            )}
-            <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
-              <FileCode size={20} weight={!settingsOpen && tab === "diff" ? "bold" : "regular"} />
-              <span>{t("Diff")}</span>
-            </span>
-          </button>
-
-          {/* 3. Antigravity */}
-          {chatEnabled && (
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsOpen(false);
-                setTab("chat");
-              }}
-              className={!settingsOpen && tab === "chat" ? "on" : ""}
-            >
-              {!settingsOpen && tab === "chat" && (
-                <motion.div
-                  layoutId="ca-mob-tab-indicator"
-                  className="absolute inset-0 rounded-[27px] pointer-events-none"
-                  style={{ background: "var(--tbo)" }}
-                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                />
-              )}
-              <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
-                <ChatCircleDots size={20} weight={!settingsOpen && tab === "chat" ? "bold" : "regular"} />
-                <span>{t("Antigravity")}</span>
-              </span>
-            </button>
-          )}
-
-          {opencodeChatEnabled && (
-            /* 4. OpenCode */
-            <button
-              type="button"
-              onClick={() => {
-                setSettingsOpen(false);
-                setTab("opencode");
-              }}
-              className={!settingsOpen && tab === "opencode" ? "on" : ""}
-            >
-              {!settingsOpen && tab === "opencode" && (
-                <motion.div
-                  layoutId="ca-mob-tab-indicator"
-                  className="absolute inset-0 rounded-[27px] pointer-events-none"
-                  style={{ background: "var(--tbo)" }}
-                  transition={{ type: "spring", stiffness: 450, damping: 35 }}
-                />
-              )}
-              <span className="relative z-10 flex flex-col items-center justify-center gap-0.5">
-                <ChatCircleDots size={20} weight={!settingsOpen && tab === "opencode" ? "bold" : "regular"} />
-                <span>{t("OpenCode")}</span>
-              </span>
-            </button>
-          )}
-        </nav>
+            items={[
+              {
+                value: "overview",
+                label: "Terminal",
+                icon: <Terminal size={18} weight={!settingsOpen && tab === "overview" ? "bold" : "regular"} />,
+              },
+              {
+                value: "diff",
+                label: t("Diff"),
+                icon: <FileCode size={18} weight={!settingsOpen && tab === "diff" ? "bold" : "regular"} />,
+              },
+              ...(chatEnabled
+                ? [
+                    {
+                      value: "chat",
+                      label: t("Antigravity"),
+                      icon: <ChatCircleDots size={18} weight={!settingsOpen && tab === "chat" ? "bold" : "regular"} />,
+                    },
+                  ]
+                : []),
+              ...(opencodeChatEnabled
+                ? [
+                    {
+                      value: "opencode",
+                      label: t("OpenCode"),
+                      icon: <ChatCircleDots size={18} weight={!settingsOpen && tab === "opencode" ? "bold" : "regular"} />,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </div>
       )}
 
       {/* ── SERVER URL DIALOG ── */}

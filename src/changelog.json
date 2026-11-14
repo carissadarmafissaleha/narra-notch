@@ -1,5 +1,29 @@
 [
   {
+    "version": "2.2.2",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "de": "Liquid Glass Mobile-UI (Glisse): Authentische iOS-Liquid-Glass-Tableiste mit federnder Linsen-Animation, SegmentedControl, Switches und dynamischem Maskottchen-Farbverlauf",
+        "en": "Liquid Glass mobile UI (Glisse): Native iOS-style Liquid Glass TabBar with spring refraction lens, SegmentedControl, Switches, glass buttons, and mascot-synced inner sheet gradient",
+        "highlight": true
+      },
+      {
+        "de": "Antigravity & OpenCode Parität: Einheitliches Chat-Design in beiden Tabs mit Live-Auswahl für Modell und Effort auf Desktop und Mobilgerät",
+        "en": "Antigravity & OpenCode UI parity: Unified chat layout across both tabs with live Model & Effort pickers powered by detected runtime models",
+        "highlight": true
+      },
+      {
+        "de": "Strikteres Pairing & Sofort-Sync: 8-stelliger Pairing-Schutz für /api/models und alle Chat-Endpunkte sowie automatische Status-Synchronisierung beim Öffnen oder Reaktivieren der Mobile-App",
+        "en": "Stricter pairing & instant mobile sync: Enforced 8-character pairing gate across /api/models and chat endpoints, plus automatic status resync on mobile launch and app focus"
+      },
+      {
+        "de": "Kompakteres Mobile-Layout: Vergrößerter Mochi-Bereich, platzsparendes Wardrobe-Dropdown, schlankerer Header mit kleinerem Connected-Badge und Versionsinfo unter Einstellungen → Über",
+        "en": "Refined mobile layout: Larger Mochi stage, compact Wardrobe dropdown, inline Connected status pill, and About version row moved to Settings"
+      }
+    ]
+  },
+  {
     "version": "2.2.1",
     "date": "2026-11-15",
     "items": [

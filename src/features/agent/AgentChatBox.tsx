@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   ArrowUp,
+  ArrowsClockwise,
   ClockCounterClockwise,
   Plus,
   Trash,
@@ -16,6 +17,7 @@ import {
   ArrowsInSimple,
   ChatCircleDots,
   FolderSimple,
+  Key,
 } from "@phosphor-icons/react";
 import {
   agentChatStore,
@@ -32,8 +34,26 @@ import {
   removeAttachment,
   toggleHistoryDrawer,
 } from "./store";
+import type { ModelInfo } from "./types";
 import { agentService } from "../../platform/services";
+import {
+  CompanionAuthError,
+  companionFetch,
+  getCompanionToken,
+  setCompanionToken,
+} from "../../platform/companionUrl";
+import { isNative } from "../../platform/native";
 import { t } from "../../i18n";
+
+function parseModelAndEffort(m: ModelInfo): { baseName: string; effort: string } {
+  const match = m.name.match(/^(.*?)\s*\(([^)]+)\)\s*$/);
+  if (match) {
+    return { baseName: match[1].trim(), effort: match[2].trim() };
+  }
+  const fallbackEffort =
+    m.category === "fast" ? "Fast" : m.category === "reasoning" ? "High" : "Medium";
+  return { baseName: m.name, effort: fallbackEffort };
+}
 
 export interface AgentChatBoxProps {
   fillHeight?: boolean;
@@ -51,11 +71,20 @@ export function AgentChatBox({
   const chat = agentChatStore.use();
   const [draft, setDraft] = useState("");
   const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
+  const [mobileMenu, setMobileMenu] = useState<"session" | "model" | "effort" | null>(null);
+  const [sessionSearch, setSessionSearch] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [needsPairing, setNeedsPairing] = useState(false);
+  const [pairCodeDraft, setPairCodeDraft] = useState(() => getCompanionToken());
+  const [pairingSubmitting, setPairingSubmitting] = useState(false);
+  const [pairingError, setPairingError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+
+  const isShowcase =
+    typeof location !== "undefined" && new URLSearchParams(location.search).has("showcase");
 
   const isHookInstalled = Boolean(agentStore.use().isHookInstalled);
   const {
@@ -70,6 +99,100 @@ export function AgentChatBox({
     historyQuery,
     isLoadingHistory,
   } = chat;
+
+  const checkPairingAuth = useCallback(async () => {
+    if (isNative || isShowcase) return;
+    try {
+      await companionFetch("/api/history");
+      setNeedsPairing(false);
+    } catch (e) {
+      if (e instanceof CompanionAuthError) {
+        setNeedsPairing(true);
+      }
+    }
+  }, [isShowcase]);
+
+  useEffect(() => {
+    if (mobile) {
+      void checkPairingAuth();
+    }
+  }, [mobile, checkPairingAuth]);
+
+  const submitPairing = async () => {
+    const code = pairCodeDraft.trim().toUpperCase();
+    if (!code) return;
+    setPairingSubmitting(true);
+    setPairingError(null);
+    const prev = getCompanionToken();
+    setCompanionToken(code);
+    try {
+      await companionFetch("/api/history");
+      setNeedsPairing(false);
+      void refreshConversationHistory();
+      agentService.getAvailableModels().then((models) => {
+        if (models.length > 0) {
+          agentChatStore.set((cur) => ({ ...cur, availableModels: models }));
+        }
+      });
+    } catch (e) {
+      setCompanionToken(prev);
+      setPairingError(
+        e instanceof CompanionAuthError
+          ? t("Kode pairing salah. Periksa lagi kode di Notch Windows.")
+          : String(e),
+      );
+    } finally {
+      setPairingSubmitting(false);
+    }
+  };
+
+  // Group availableModels by baseName and effort for OpenCode-style split Model + Effort pickers
+  const groupedModels = useMemo(() => {
+    const map = new Map<
+      string,
+      { baseName: string; category: ModelInfo["category"]; variants: { effort: string; model: ModelInfo }[] }
+    >();
+    for (const m of availableModels) {
+      const { baseName, effort } = parseModelAndEffort(m);
+      const entry = map.get(baseName);
+      if (entry) {
+        if (!entry.variants.some((v) => v.effort === effort)) {
+          entry.variants.push({ effort, model: m });
+        }
+      } else {
+        map.set(baseName, {
+          baseName,
+          category: m.category,
+          variants: [{ effort, model: m }],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [availableModels]);
+
+  const currentModelObj = availableModels.find((m) => m.id === selectedModel);
+  const currentParsed = currentModelObj
+    ? parseModelAndEffort(currentModelObj)
+    : {
+        baseName: selectedModel.replace(/-high|-medium|-low/g, "").replace(/-/g, " "),
+        effort: selectedModel.includes("medium")
+          ? "Medium"
+          : selectedModel.includes("low")
+          ? "Low"
+          : "High",
+      };
+  const currentBaseGroup = groupedModels.find((g) => g.baseName === currentParsed.baseName) ?? groupedModels[0];
+  const filteredConversations = useMemo(() => {
+    const q = sessionSearch.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) => {
+      const title = (c.title || "").toLowerCase();
+      const preview = (c.preview || "").toLowerCase();
+      const ws = (c.workspace || "").toLowerCase();
+      return title.includes(q) || preview.includes(q) || ws.includes(q);
+    });
+  }, [conversations, sessionSearch]);
+  const activeConversation = conversations.find((c) => c.id === chat.conversationId);
 
   // Auto-scroll inside messagesContainer only - NEVER scroll the window or push header off-screen
   useEffect(() => {
@@ -170,137 +293,291 @@ export function AgentChatBox({
     if (!removed) window.alert(t("Gagal menghapus percakapan."));
   };
 
-  const currentModelObj = availableModels.find((m) => m.id === selectedModel);
   const currentModelLabel = currentModelObj
     ? currentModelObj.name
     : selectedModel.replace(/-high|-medium|-low/g, "").replace(/-/g, " ");
 
   const displayMessages = fillHeight ? messages : messages.slice(-4);
 
+  if (needsPairing && mobile) {
+    const chars = Array.from({ length: 8 }, (_, idx) => pairCodeDraft[idx] || "");
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+        <b className="ca-et" style={{ fontSize: 20, marginTop: 4 }}>
+          {t("Pairing Antigravity Chat")}
+        </b>
+        <p className="ca-ep" style={{ margin: "10px 8px 0" }}>
+          {t("Buka Notch Windows → Settings → Coding Agent → salin Kode pairing HP untuk membuka chat di HP ini.")}
+        </p>
+        <div className="relative my-5">
+          <div className="ca-rw ca-ce" style={{ gap: 5 }}>
+            {chars.map((ch, idx) => (
+              <i
+                key={idx}
+                className={`ca-cell ${idx === pairCodeDraft.length ? "active" : ""}`}
+              >
+                {ch}
+              </i>
+            ))}
+          </div>
+          <input
+            type="text"
+            value={pairCodeDraft}
+            onChange={(e) => setPairCodeDraft(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submitPairing();
+            }}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={8}
+            aria-label={t("Pairing Antigravity Chat")}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-text"
+            autoFocus
+          />
+        </div>
+        {pairingError && (
+          <p className="mb-3 text-[12px] leading-relaxed" style={{ color: "var(--er)" }}>
+            {pairingError}
+          </p>
+        )}
+        <button
+          type="button"
+          disabled={pairingSubmitting || !pairCodeDraft.trim()}
+          onClick={() => void submitPairing()}
+          className="ca-bt max-w-[340px]"
+        >
+          {pairingSubmitting ? t("Menghubungkan…") : t("Hubungkan Chat")}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`relative flex flex-col w-full font-sans text-zinc-200 ${
         fillHeight ? "h-full flex-1 min-h-0" : ""
-      }`}
+      } ${mobile ? "px-1 h-full flex-1 min-h-0" : ""}`}
     >
-      {/* ── TOP ACTION BAR: Model Pill, History Button, New Chat, Expand ── */}
+      {/* ── TOP ACTION BAR ── */}
       {mobile ? (
-        <div className="flex flex-col gap-2 pb-2 shrink-0">
-          <div className="ca-rw">
-            <div className="relative">
+        <>
+          {/* Row 1: Session picker, new session, refresh, pairing key (identical to OpenCode) */}
+          <div className="flex shrink-0 items-center justify-between gap-2 py-0.5">
+            <div className="relative flex min-w-0 items-center">
               <button
                 type="button"
-                onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
+                onClick={() => {
+                  if (mobileMenu !== "session") void refreshConversationHistory();
+                  setMobileMenu(mobileMenu === "session" ? null : "session");
+                }}
                 className="ca-chip"
-                title={t("Pilih model Antigravity")}
               >
-                {selectedModel.includes("flash") ? (
-                  <Lightning size={16} weight="bold" style={{ color: "var(--ac)" }} />
-                ) : (
-                  <Brain size={16} weight="bold" style={{ color: "var(--ac)" }} />
-                )}
-                <span className="truncate max-w-[200px]">{currentModelLabel}</span>
-                <CaretDown size={14} weight="bold" style={{ color: "var(--mu)" }} />
+                <span className="max-w-[160px] truncate">
+                  {activeConversation ? activeConversation.title || t("Percakapan") : t("Pilih sesi")}
+                </span>
+                <CaretDown size={13} weight="bold" className="shrink-0 text-zinc-400" />
               </button>
 
-              {isModelMenuOpen && (
+              {mobileMenu === "session" && (
                 <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsModelMenuOpen(false)}
-                  />
-                  <div
-                    className="absolute left-0 top-full mt-1.5 w-64 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-100"
-                    style={{
-                      background: "var(--sh)",
-                      border: "1px solid var(--ln)",
-                    }}
-                  >
-                    <div
-                      className="px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-wider"
-                      style={{ color: "var(--mu)" }}
-                    >
-                      {t("Model Antigravity")}
+                  <div className="fixed inset-0 z-40" onClick={() => setMobileMenu(null)} />
+                  <div className="absolute left-0 top-7 z-50 max-h-72 w-[min(20rem,85vw)] overflow-hidden rounded-xl border border-white/15 bg-[#16171d]/95 p-1.5 shadow-2xl backdrop-blur-xl flex flex-col">
+                    {/* Search Bar */}
+                    <div className="relative mb-1 flex items-center rounded-lg border border-white/10 bg-black/40 px-2 py-1">
+                      <MagnifyingGlass size={12} className="shrink-0 text-zinc-500 mr-1.5" />
+                      <input
+                        type="text"
+                        value={sessionSearch}
+                        onChange={(e) => setSessionSearch(e.target.value)}
+                        placeholder={t("Cari riwayat sesi…")}
+                        className="w-full bg-transparent text-[11px] text-zinc-200 placeholder-zinc-500 outline-none"
+                        autoFocus
+                      />
+                      {sessionSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setSessionSearch("")}
+                          className="text-zinc-500 hover:text-zinc-300 p-0.5 rounded cursor-pointer"
+                        >
+                          <X size={11} weight="bold" />
+                        </button>
+                      )}
                     </div>
-                    <div className="flex flex-col gap-0.5 max-h-52 overflow-y-auto">
-                      {availableModels.map((m) => {
-                        const isSelected = m.id === selectedModel;
-                        return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedModel(m.id);
-                              setIsModelMenuOpen(false);
-                            }}
-                            className="flex items-center justify-between w-full px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer"
-                            style={{
-                              background: isSelected ? "var(--ab)" : "transparent",
-                              color: isSelected ? "var(--ac)" : "var(--tx)",
-                              fontWeight: isSelected ? 600 : 500,
-                            }}
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              {m.category === "fast" ? (
-                                <Lightning size={14} weight="fill" style={{ color: "var(--ac)" }} className="shrink-0" />
-                              ) : (
-                                <Brain size={14} weight="fill" style={{ color: "var(--ac)" }} className="shrink-0" />
-                              )}
-                              <span className="truncate">{m.name}</span>
+
+                    {/* Quick New Session */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        startNewConversation();
+                        setMobileMenu(null);
+                      }}
+                      className="mb-1 flex w-full items-center gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-left text-[11px] font-medium text-emerald-300 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                    >
+                      <Plus size={11} weight="bold" />
+                      <span>{t("Buat sesi baru")}</span>
+                    </button>
+
+                    {/* Session list */}
+                    <div className="max-h-56 overflow-y-auto pr-0.5">
+                      {isLoadingHistory ? (
+                        <div className="px-2 py-4 text-center text-[11px] text-zinc-500">
+                          {t("Memuat riwayat sesi...")}
+                        </div>
+                      ) : filteredConversations.length === 0 ? (
+                        <div className="px-2 py-4 text-center text-[11px] text-zinc-500">
+                          {t("Tidak ada percakapan ditemukan")}
+                        </div>
+                      ) : (
+                        filteredConversations.map((c) => {
+                          const isActive = c.id === chat.conversationId;
+                          return (
+                            <div
+                              key={c.id}
+                              onClick={() => {
+                                void loadConversation(c.id);
+                                setMobileMenu(null);
+                                setSessionSearch("");
+                              }}
+                              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] transition-colors cursor-pointer ${
+                                isActive ? "bg-white/[0.10] text-zinc-100" : "text-zinc-400 hover:bg-white/[0.06]"
+                              }`}
+                            >
+                              <span className="min-w-0 flex-1 truncate">{c.title || "Untitled Session"}</span>
+                              {isActive && <Check size={12} weight="bold" className="text-emerald-400 shrink-0" />}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteConversation(c.id);
+                                }}
+                                className="p-0.5 text-zinc-500 hover:text-red-400 rounded"
+                                title={t("Hapus percakapan")}
+                              >
+                                <Trash size={11} weight="bold" />
+                              </button>
                             </div>
-                            {isSelected && <Check size={14} weight="bold" style={{ color: "var(--ac)" }} className="shrink-0" />}
-                          </button>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 </>
               )}
             </div>
+
+            <div className="flex shrink-0 items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => startNewConversation()}
+                className="ca-ib"
+                title={t("Sesi baru")}
+              >
+                <Plus size={18} weight="bold" />
+              </button>
+              <button
+                type="button"
+                onClick={() => void refreshConversationHistory()}
+                className="ca-ib"
+                title={t("Segarkan")}
+              >
+                <ArrowsClockwise size={18} weight="bold" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPairCodeDraft(getCompanionToken());
+                  setPairingError(null);
+                  setNeedsPairing(true);
+                }}
+                className="ca-ib"
+                title={t("Ubah kode pairing")}
+              >
+                <Key size={18} weight="bold" />
+              </button>
+            </div>
           </div>
 
-          <div className="ca-rw">
+          {/* Row 2: Model & Effort pickers (identical layout to OpenCode's Agent & Model row) */}
+          <div className="relative flex shrink-0 items-center gap-2 mt-1.5 mb-1">
             <button
               type="button"
-              onClick={() => toggleHistoryDrawer()}
-              className="ca-chip"
-              style={
-                isHistoryOpen
-                  ? { background: "var(--ab)", color: "var(--ac)" }
-                  : undefined
-              }
-              title={t("Riwayat Percakapan (AGY Desktop, IDE, CLI)")}
+              onClick={() => setMobileMenu(mobileMenu === "model" ? null : "model")}
+              className="ca-chip d"
+              title={t("Pilih model Antigravity")}
             >
-              <ClockCounterClockwise size={15} weight="bold" />
-              <span>{t("Riwayat")}</span>
+              <span className="max-w-[160px] truncate">{currentParsed.baseName}</span>
+              <CaretDown size={13} weight="bold" className="shrink-0 text-zinc-600" />
             </button>
 
             <button
               type="button"
-              onClick={() => startNewConversation()}
-              className="ca-chip"
-              title={t("Sesi Baru (New Chat)")}
+              onClick={() => setMobileMenu(mobileMenu === "effort" ? null : "effort")}
+              className="ca-chip d"
+              title={t("Effort")}
             >
-              <Plus size={15} weight="bold" />
-              <span>{t("Baru")}</span>
+              <span className="max-w-[100px] truncate">{currentParsed.effort}</span>
+              <CaretDown size={13} weight="bold" className="shrink-0 text-zinc-600" />
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (messages.length > 0 && window.confirm(t("Hapus semua pesan dalam sesi chat ini?"))) {
-                  clearChat();
-                }
-              }}
-              disabled={messages.length === 0 && !streamingText}
-              className={`ca-chip ${messages.length === 0 && !streamingText ? "d opacity-50 pointer-events-none" : "d"}`}
-              title={t("Hapus Chat")}
-            >
-              <Trash size={15} weight="bold" />
-              <span>{t("Hapus")}</span>
-            </button>
+            {/* Model picker dropdown */}
+            {mobileMenu === "model" && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMobileMenu(null)} />
+                <div className="absolute left-0 top-7 z-50 max-h-64 w-[min(17rem,80vw)] overflow-y-auto rounded-xl border border-white/15 bg-[#16171d]/95 p-1.5 shadow-2xl backdrop-blur-xl">
+                  {groupedModels.map((g) => {
+                    const isSelected = g.baseName === currentParsed.baseName;
+                    return (
+                      <button
+                        key={g.baseName}
+                        type="button"
+                        onClick={() => {
+                          const sameEffort = g.variants.find((v) => v.effort === currentParsed.effort);
+                          setSelectedModel((sameEffort ?? g.variants[0]).model.id);
+                          setMobileMenu(null);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] transition-colors ${
+                          isSelected ? "bg-white/[0.10] text-zinc-100" : "text-zinc-300 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{g.baseName}</span>
+                        {isSelected && <Check size={12} weight="bold" className="text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Effort picker dropdown */}
+            {mobileMenu === "effort" && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMobileMenu(null)} />
+                <div className="absolute left-24 top-7 z-50 max-h-64 w-[min(13rem,70vw)] overflow-y-auto rounded-xl border border-white/15 bg-[#16171d]/95 p-1.5 shadow-2xl backdrop-blur-xl">
+                  {(currentBaseGroup?.variants ?? []).map((v) => {
+                    const isSelected = v.model.id === selectedModel;
+                    return (
+                      <button
+                        key={v.model.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedModel(v.model.id);
+                          setMobileMenu(null);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11.5px] transition-colors ${
+                          isSelected ? "bg-white/[0.10] text-zinc-100" : "text-zinc-300 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <span className="min-w-0 flex-1 truncate">{v.effort}</span>
+                        {isSelected && <Check size={12} weight="bold" className="text-emerald-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </>
       ) : (
       <div className="flex items-center justify-between py-1 mb-1 border-b border-white/[0.05] shrink-0">
         {/* Model Selector Dropdown Pill */}
@@ -492,29 +769,16 @@ export function AgentChatBox({
         </div>
       ) : fillHeight ? (
         mobile ? (
-          <div className="flex-1 flex flex-col items-center justify-center py-2 text-center my-auto animate-in fade-in duration-200">
-            <b className="ca-et" style={{ marginTop: 12 }}>
-              {t("Antigravity Interactive Agent")}
+          <div className="flex flex-1 flex-col items-center justify-center py-4 text-center">
+            <div className="ca-ei" style={{ marginTop: 18 }}>
+              <ChatCircleDots size={26} weight="bold" />
+            </div>
+            <b className="ca-et">
+              {chat.conversationId ? t("Sesi ini belum punya pesan.") : t("Pilih sesi")}
             </b>
             <p className="ca-ep">
-              {t("Kirim instruksi coding, jalankan perintah bash, atau tanyakan struktur kode.")}
+              {t("Ketik instruksi untuk Antigravity atau paste screenshot…")}
             </p>
-            <div className="ca-rw ca-ce" style={{ marginTop: 14 }}>
-              {[
-                "git status -s",
-                "Periksa perubahan terbaru",
-                "Jelaskan alur aplikasi ini",
-              ].map((promptText, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => void sendAgentChat(promptText)}
-                  className="ca-chip"
-                >
-                  {promptText}
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
         /* Helpful starter suggestions when chat has no messages yet */

@@ -491,6 +491,7 @@ async fn handle_connection(
     // The companion hook connection (status, events, diffs) stays open for live observation.
     if uri.starts_with("/api/opencode/")
         || uri == "/api/chat"
+        || uri == "/api/models"
         || uri == "/api/upload"
         || uri == "/api/history"
         || uri.starts_with("/api/history/")
