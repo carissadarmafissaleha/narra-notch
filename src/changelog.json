@@ -1,5 +1,20 @@
 [
   {
+    "version": "2.2.3",
+    "date": "2026-11-15",
+    "items": [
+      {
+        "de": "Mobiles Einstellungs-Layout behoben: Kompaktes Appearance-SegmentedControl ohne Überlauf, ausgewogene Mascot-Höhe und sauberes Scrollen ohne Überlappung mit der unteren TabBar",
+        "en": "Fixed mobile settings layout: Compact Appearance SegmentedControl without horizontal overflow, balanced Mochi stage height, and clean scroll clearance above the floating TabBar",
+        "highlight": true
+      },
+      {
+        "de": "Glisse Liquid-Glass-Feinschliff: Verbesserter Unschärfe- und Kontrasteffekt für die schwebende Tableiste und zweizeilige Versionsanzeige unter Über",
+        "en": "Glisse Liquid Glass polish: Enhanced backdrop blur and contrast on the floating TabBar dock and crisp two-line version layout in Settings → About"
+      }
+    ]
+  },
+  {
     "version": "2.2.2",
     "date": "2026-11-15",
     "items": [

@@ -681,7 +681,7 @@ export function MobileAgentCompanion() {
         <section className="ca-mo shrink-0">
           <div className="relative flex items-center justify-center">
             <MochiCanvas
-              size={215}
+              size={190}
               state={botState}
               outfit={outfit}
               trackCursor={true}
@@ -706,12 +706,12 @@ export function MobileAgentCompanion() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.99 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="flex-1 min-h-0 flex flex-col h-full"
+            className="flex-1 min-h-0 flex flex-col w-full"
           >
             {settingsOpen ? (
           /* ── SETTINGS SHEET VIEW (Matching 07_Settings / 14_Settings) ── */
-          <div className="flex flex-col pb-4 animate-in fade-in duration-150">
-            <div className="ca-rw ca-sp mb-1">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 pb-2 flex flex-col animate-in fade-in duration-150">
+            <div className="ca-rw ca-sp mb-1 shrink-0">
               <span className="ca-ag">
                 <b>{t("Einstellungen")}</b>
               </span>
@@ -719,7 +719,7 @@ export function MobileAgentCompanion() {
 
             {/* 1. Appearance (Light / Dark / Auto) */}
             <div className="ca-sr">
-              <Moon size={20} weight="bold" />
+              <Moon size={18} weight="bold" />
               <b>{t("Appearance")}</b>
               <SegmentedControl
                 value={theme}
@@ -734,7 +734,7 @@ export function MobileAgentCompanion() {
 
             {/* 2. Wardrobe / Outfit (Compact Select Dropdown) */}
             <div className="ca-sr">
-              <TShirt size={20} weight="bold" />
+              <TShirt size={18} weight="bold" />
               <b>{t("Outfit")}</b>
               <select
                 value={outfitSelection}
@@ -754,7 +754,7 @@ export function MobileAgentCompanion() {
                   }).catch(() => {});
                 }}
                 aria-label={t("Outfit")}
-                className="rounded-xl px-3 py-2 text-[13px] font-medium outline-none cursor-pointer"
+                className="rounded-xl px-2.5 py-1.5 text-[12.5px] font-medium outline-none cursor-pointer shrink-0"
                 style={{
                   background: "var(--sh)",
                   color: "var(--tx)",
@@ -771,7 +771,7 @@ export function MobileAgentCompanion() {
 
             {/* 3. Turbo Mode Switch */}
             <div className="ca-sr">
-              <Lightning size={20} weight="bold" />
+              <Lightning size={18} weight="bold" />
               <b>{t("Mode Turbo")}</b>
               <Switch
                 checked={turboEnabled}
@@ -782,7 +782,7 @@ export function MobileAgentCompanion() {
 
             {/* 4. Notifications Switch */}
             <div className="ca-sr">
-              {notifEnabled ? <Bell size={20} weight="bold" /> : <BellSlash size={20} weight="bold" />}
+              {notifEnabled ? <Bell size={18} weight="bold" /> : <BellSlash size={18} weight="bold" />}
               <b>{t("Notifications")}</b>
               <Switch
                 checked={notifEnabled}
@@ -794,9 +794,9 @@ export function MobileAgentCompanion() {
             {/* 5. Sound Switch */}
             <div className="ca-sr">
               {soundEnabled ? (
-                <SpeakerSimpleHigh size={20} weight="bold" />
+                <SpeakerSimpleHigh size={18} weight="bold" />
               ) : (
-                <SpeakerSimpleSlash size={20} weight="bold" />
+                <SpeakerSimpleSlash size={18} weight="bold" />
               )}
               <b>{t("Sound")}</b>
               <Switch
@@ -808,7 +808,7 @@ export function MobileAgentCompanion() {
 
             {/* 6. PC Server Connection */}
             <div className="ca-sr">
-              <PlugsConnected size={20} weight="bold" />
+              <PlugsConnected size={18} weight="bold" />
               <b>{t("Server PC")}</b>
               <button
                 type="button"
@@ -817,8 +817,8 @@ export function MobileAgentCompanion() {
                   setServerError(null);
                   setServerUrlOpen(true);
                 }}
-                className="ca-chip"
-                style={{ height: 36, padding: "0 12px", fontSize: 12.5, background: "var(--sh)" }}
+                className="ca-chip shrink-0"
+                style={{ height: 32, padding: "0 10px", fontSize: 12, background: "var(--sh)" }}
               >
                 <span className="truncate max-w-[150px]">
                   {getCompanionServerUrl() || "192.168.1.25:1421"}
@@ -828,17 +828,19 @@ export function MobileAgentCompanion() {
 
             {/* 7. About */}
             <div className="ca-sr">
-              <Info size={20} weight="bold" />
+              <Info size={18} weight="bold" />
               <b>{t("About")}</b>
-              <span className="text-[11.5px] font-medium opacity-70 text-right">
-                Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"} · Notch {PLATFORM_LABEL} v{APP_VERSION}
+              <span className="text-[11px] font-medium opacity-70 text-right leading-[1.25] shrink-0">
+                Notch Windows {desktopVersion ? `v${desktopVersion}` : "—"}
+                <br />
+                Notch {PLATFORM_LABEL} v{APP_VERSION}
               </span>
             </div>
           </div>
         ) : tab === "overview" ? (
           isFinished ? (
             /* ── VIEW: FINISHED / SESSION COMPLETE ── */
-            <div className="flex flex-col flex-1 items-center justify-center text-center py-4 animate-in fade-in duration-200">
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto items-center justify-center text-center py-4 animate-in fade-in duration-200">
               <span className="ca-lv mb-2 inline-flex items-center gap-1.5">
                 <Check size={13} weight="bold" />
                 <span>{t("Session finished")}</span>
@@ -885,7 +887,7 @@ export function MobileAgentCompanion() {
             </div>
           ) : (
             /* ── VIEW: TERMINAL / OVERVIEW & PERMISSION APPROVAL (01, 02, 08, 09) ── */
-            <div className="flex flex-col flex-1 animate-in fade-in duration-150">
+            <div className="flex flex-col flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-150">
               <div className="ca-rw ca-sp">
                 <span className="ca-ag">
                   <b>{agentLabel}</b> Agent
