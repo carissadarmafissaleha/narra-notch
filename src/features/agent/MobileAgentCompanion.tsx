@@ -608,9 +608,9 @@ export function MobileAgentCompanion() {
   const diffs = s.diffs || [];
   const hasDiffs = diffs.some((d) => d.hunks.length > 0 || d.tooLarge);
   const mascotGlow = isApproval
-    ? "rgba(255, 159, 10, 0.16)"
+    ? "rgba(255, 159, 10, 0.18)"
     : isFinished
-    ? "rgba(48, 209, 88, 0.14)"
+    ? "rgba(48, 209, 88, 0.18)"
     : isWorking
     ? "rgba(91, 127, 219, 0.18)"
     : "rgba(91, 127, 219, 0.09)";
@@ -622,7 +622,7 @@ export function MobileAgentCompanion() {
       style={{ "--m-glow": mascotGlow } as React.CSSProperties}
       className={`ca-mob fixed inset-0 h-[100dvh] w-full flex flex-col overflow-hidden transition-colors duration-200 ${
         resolvedTheme === "dark" ? "dk" : "mobile-light"
-      } ${isApproval ? "am" : ""}`}
+      } ${isApproval ? "am" : isFinished ? "ok" : ""}`}
     >
       {/* ── RADIAL HERO GLOW ── */}
       <div className="ca-gl" />
@@ -1064,15 +1064,18 @@ export function MobileAgentCompanion() {
       {/* ── BOTTOM DOCK: APPROVAL BUTTONS (When pending approval) OR GLISSE LIQUID GLASS TAB BAR ── */}
       {isApproval && !settingsOpen && tab === "overview" ? (
         <div className="ca-dock animate-in fade-in slide-in-from-bottom-2 duration-200">
-          <Button type="button" variant="glass" destructive onClick={handleDeny} className="flex-1">
-            {t("Decline")}
-          </Button>
-          <Button type="button" variant="filled" onClick={handleAllow} className="flex-1">
-            {t("Allow")}
-          </Button>
-          <Button type="button" variant="glass" onClick={() => void handleAlways()} className="flex-1">
-            {t("Always")}
-          </Button>
+          <button type="button" onClick={handleDeny} className="ca-bn">
+            <span>{t("Decline")}</span>
+            <kbd>N</kbd>
+          </button>
+          <button type="button" onClick={handleAllow} className="ca-bn pr">
+            <span>{t("Allow")}</span>
+            <kbd>Y</kbd>
+          </button>
+          <button type="button" onClick={() => void handleAlways()} className="ca-bn">
+            <span>{t("Always")}</span>
+            <kbd>A</kbd>
+          </button>
         </div>
       ) : (
         <div

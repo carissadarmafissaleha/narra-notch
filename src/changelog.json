@@ -1,5 +1,25 @@
 [
   {
+    "version": "2.2.4",
+    "date": "2026-11-16",
+    "items": [
+      {
+        "de": "Antigravity-Chat im exakten OpenCode-Layout: Session-Picker mit Suche, Neu-/Aktualisieren-Tasten, Modell- und Effort-Pillen, Emerald-Bubbles für dich und Sky-Bubbles für den Agenten, identischer Composer – auf Desktop und Mobilgerät",
+        "en": "Antigravity chat now matches the OpenCode layout exactly: session picker with search, New/Refresh actions, Model and Effort pills, emerald user bubbles and sky assistant bubbles, and the same composer — on desktop and mobile",
+        "highlight": true
+      },
+      {
+        "de": "Modellliste wird automatisch von der Antigravity-CLI erkannt (`agy models`) statt fest verdrahtet: 18 Modelle live erkannt, 5-Minuten-Cache, 8-Sekunden-Timeout und sicherer Fallback ohne die Oberfläche zu blockieren",
+        "en": "Model list is now auto-detected from the Antigravity CLI (`agy models`) instead of being hardcoded: 18 models detected live, 5-minute cache, 8-second timeout, and a safe fallback that never blocks the UI",
+        "highlight": true
+      },
+      {
+        "de": "Modell-Picker mit Suche, Effort-Auswahl pro Modell und automatischem Wechsel, falls ein Modell nicht mehr verfügbar ist",
+        "en": "Model picker with search, per-model effort selection, and automatic fallback when a model is no longer available"
+      }
+    ]
+  },
+  {
     "version": "2.2.3",
     "date": "2026-11-15",
     "items": [

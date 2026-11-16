@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-v2.2.3-111?style=flat-square" alt="Version 2.2.3" />
+  <img src="https://img.shields.io/badge/version-v2.2.4-111?style=flat-square" alt="Version 2.2.4" />
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-111?style=flat-square" alt="Windows 10 and 11" />
   <img src="https://img.shields.io/badge/iOS-IPA-111?style=flat-square" alt="iOS Sideload IPA" />
   <img src="https://img.shields.io/badge/Android-APK-111?style=flat-square" alt="Android APK" />
@@ -50,9 +50,9 @@
 
 ### ⬇️ Download Links / Unduhan
 
-- **Windows 10 / 11 Installer**: Download `narra-notch_2.2.3_x64-setup.exe` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest) (no admin rights required).
-- **Android Companion**: Download `narra-notch_2.2.3_android.apk` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest).
-- **iOS Companion**: Sideload `narra-notch_2.2.3_ios.ipa` via AltStore / SideStore / Scarlet / TrollStore.
+- **Windows 10 / 11 Installer**: Download `narra-notch_2.2.4_x64-setup.exe` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest) (no admin rights required).
+- **Android Companion**: Download `narra-notch_2.2.4_android.apk` from [GitHub Releases](https://github.com/carissadarmafissaleha/narra-notch/releases/latest).
+- **iOS Companion**: Sideload `narra-notch_2.2.4_ios.ipa` via AltStore / SideStore / Scarlet / TrollStore.
 
 ---
 

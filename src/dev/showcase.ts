@@ -145,6 +145,7 @@ Fitur Utama:
   // Seed sample English chat messages into agentChatStore
   agentChatStore.set((cur) => ({
     ...cur,
+    conversationId: "showcase-chat",
     messages: [
       {
         id: "m1",
@@ -157,15 +158,50 @@ Fitur Utama:
         role: "assistant",
         content: "I've refactored `notification.ts` into modular handlers and added full test coverage in `notification.test.ts`. All 12 test suites are passing!",
         timestamp: Date.now() - 30000,
-        model: "gemini-2.5-flash",
+        model: "gemini-4-hydrogen-high",
       },
     ],
-    availableModels: [
-      { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", category: "fast" },
-      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", category: "reasoning" },
-      { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet", category: "standard" },
+    conversations: [
+      {
+        id: "showcase-chat",
+        title: "Refactor notification system",
+        preview: "Split notification.ts into modular handlers and add tests.",
+        lastModified: new Date().toISOString().slice(0, 10),
+        workspace: "C:\\Projects\\narra-notch",
+        stepCount: 6,
+      },
+      {
+        id: "showcase-chat-2",
+        title: "Fix mobile dock overflow",
+        preview: "Dock pill overflows the safe area on iPhone 15 Pro.",
+        lastModified: new Date(Date.now() - 86400000).toISOString().slice(0, 10),
+        workspace: "C:\\Projects\\narra-notch",
+        stepCount: 3,
+      },
     ],
-    selectedModel: "gemini-2.5-flash",
+    // Same shape as `agy models`: the real app asks the CLI; the browser preview
+    // cannot, so it shows the list the CLI returned on this machine.
+    availableModels: [
+      { id: "gemini-4-argon-medium", name: "Gemini 4 Argon (Medium)", category: "reasoning" },
+      { id: "gemini-4-argon-high", name: "Gemini 4 Argon (High)", category: "reasoning" },
+      { id: "gemini-4-argon-low", name: "Gemini 4 Argon (Low)", category: "fast" },
+      { id: "gemini-4-hydrogen-high", name: "Gemini 4 Hydrogen (High)", category: "reasoning" },
+      { id: "gemini-4-hydrogen-xhigh", name: "Gemini 4 Hydrogen (XHigh)", category: "reasoning" },
+      { id: "gemini-4-hydrogen-medium", name: "Gemini 4 Hydrogen (Medium)", category: "reasoning" },
+      { id: "gemini-4-hydrogen-low", name: "Gemini 4 Hydrogen (Low)", category: "fast" },
+      { id: "gemini-pro-orchestrator-g1-pro", name: "Orchestrator (Argon)", category: "reasoning" },
+      { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)", category: "fast" },
+      { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash (Medium)", category: "fast" },
+      { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)", category: "fast" },
+      { id: "claude-opus-5-5-low", name: "Claude Opus 5.5 (Low)", category: "fast" },
+      { id: "claude-opus-5-5-medium", name: "Claude Opus 5.5 (Medium)", category: "reasoning" },
+      { id: "claude-opus-5-5-high", name: "Claude Opus 5.5 (High)", category: "reasoning" },
+      { id: "claude-sonnet-5-5-low", name: "Claude Sonnet 5.5 (Low)", category: "fast" },
+      { id: "claude-sonnet-5-5-medium", name: "Claude Sonnet 5.5 (Medium)", category: "reasoning" },
+      { id: "claude-sonnet-5-5-high", name: "Claude Sonnet 5.5 (High)", category: "reasoning" },
+      { id: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)", category: "standard" },
+    ],
+    selectedModel: "gemini-4-hydrogen-high",
   }));
 
   // Agent store state configuration
@@ -260,8 +296,16 @@ Fitur Utama:
 
   // Agent sub-tab
   const agentSubTab = params.get("agentSubTab");
-  if (agentSubTab === "diff" || agentSubTab === "wardrobe" || agentSubTab === "overview") {
-    agentSubTabStore.set({ tab: agentSubTab });
+  if (
+    agentSubTab === "diff" ||
+    agentSubTab === "wardrobe" ||
+    agentSubTab === "overview" ||
+    agentSubTab === "chat" ||
+    agentSubTab === "opencode"
+  ) {
+    // Deferred: React StrictMode's dev remount runs AgentView's cleanup, which
+    // resets the sub-tab to overview after this synchronous call.
+    window.setTimeout(() => agentSubTabStore.set({ tab: agentSubTab }), 150);
   }
 
   // Lyrics setup

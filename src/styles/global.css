@@ -456,6 +456,29 @@ body {
   --gl: rgba(255, 159, 10, 0.22);
 }
 
+.ca-mob.ok {
+  --gl: rgba(48, 209, 88, 0.28);
+}
+
+.ca-mob.dk.ok {
+  --gl: rgba(48, 209, 88, 0.2);
+}
+
+.ca-mob.ok .ca-st .a {
+  background: var(--okb);
+  color: var(--ok);
+}
+
+.ca-mob.ok .ca-bt {
+  background: var(--ok);
+  color: #ffffff;
+}
+
+.ca-mob.dk.ok .ca-bt {
+  background: #30D158;
+  color: #091710;
+}
+
 .ca-mob .ca-gl {
   position: absolute;
   left: 0;

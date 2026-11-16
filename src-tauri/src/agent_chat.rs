@@ -10,6 +10,8 @@ use std::fs;
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use rusqlite::{Connection, OpenFlags};
 use serde::{Deserialize, Serialize};
@@ -86,8 +88,13 @@ fn clean_user_prompt(raw: &str) -> String {
     s.trim().to_string()
 }
 
-/// Retrieve supported models for Antigravity
-pub fn get_available_models_internal() -> Vec<ModelInfo> {
+// Model list discovered from `agy models`, cached so the notch and the phone
+// companion do not spawn the CLI on every poll.
+static MODEL_CACHE: Mutex<Option<(Instant, Vec<ModelInfo>)>> = Mutex::new(None);
+const MODEL_CACHE_TTL: Duration = Duration::from_secs(300);
+
+/// Last-resort list, only used when the CLI is not installed or unreachable.
+fn fallback_models() -> Vec<ModelInfo> {
     vec![
         ModelInfo {
             id: "gemini-3.8-flash-high".to_string(),
@@ -97,11 +104,6 @@ pub fn get_available_models_internal() -> Vec<ModelInfo> {
         ModelInfo {
             id: "gemini-4-argon-medium".to_string(),
             name: "Gemini 4 Argon (Medium)".to_string(),
-            category: "reasoning".to_string(),
-        },
-        ModelInfo {
-            id: "gemini-4-argon-high".to_string(),
-            name: "Gemini 4 Argon (High)".to_string(),
             category: "reasoning".to_string(),
         },
         ModelInfo {
@@ -120,6 +122,130 @@ pub fn get_available_models_internal() -> Vec<ModelInfo> {
             category: "standard".to_string(),
         },
     ]
+}
+
+fn model_category(id: &str, name: &str) -> &'static str {
+    let text = format!("{} {}", id, name).to_lowercase();
+    if text.contains("flash") || text.contains("low") {
+        "fast"
+    } else if text.contains("opus")
+        || text.contains("sonnet")
+        || text.contains("argon")
+        || text.contains("hydrogen")
+        || text.contains("pro")
+        || text.contains("reason")
+    {
+        "reasoning"
+    } else {
+        "standard"
+    }
+}
+
+/// Candidate executables: PATH first, then the per-user install location.
+fn agy_candidates() -> Vec<PathBuf> {
+    let mut candidates = vec![PathBuf::from("agy")];
+    if let Ok(local) = std::env::var("LOCALAPPDATA") {
+        candidates.push(PathBuf::from(local).join("agy").join("bin").join("agy.exe"));
+    }
+    if let Ok(profile) = std::env::var("USERPROFILE") {
+        candidates.push(
+            PathBuf::from(profile)
+                .join(".local")
+                .join("bin")
+                .join("agy.exe"),
+        );
+    }
+    candidates
+}
+
+/// Ask `agy models` for the models this account can actually use.
+///
+/// Output is one `id<TAB>Display Name` pair per line on stdout; the
+/// "Fetching available models..." banner goes to stderr and is ignored.
+fn detect_models_from_cli() -> Option<Vec<ModelInfo>> {
+    for exe in agy_candidates() {
+        let mut command = std::process::Command::new(&exe);
+        command.arg("models");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            command.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+        }
+
+        let mut child = match command.stdout(Stdio::piped()).stderr(Stdio::null()).spawn() {
+            Ok(child) => child,
+            Err(_) => continue,
+        };
+        let Some(stdout) = child.stdout.take() else {
+            let _ = child.kill();
+            continue;
+        };
+
+        // Read on a worker so a slow network call cannot freeze the UI thread.
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let mut text = String::new();
+            let mut reader = std::io::BufReader::new(stdout);
+            let _ = std::io::Read::read_to_string(&mut reader, &mut text);
+            let _ = tx.send(text);
+        });
+
+        let text = match rx.recv_timeout(Duration::from_secs(8)) {
+            Ok(text) => {
+                let _ = child.wait();
+                text
+            }
+            Err(_) => {
+                let _ = child.kill();
+                return None;
+            }
+        };
+
+        let mut models: Vec<ModelInfo> = Vec::new();
+        for line in text.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let (id, name) = match line.split_once('\t') {
+                Some((id, name)) => (id.trim(), name.trim()),
+                None => (line, line),
+            };
+            if id.is_empty() || id.contains(' ') {
+                continue;
+            }
+            models.push(ModelInfo {
+                id: id.to_string(),
+                name: if name.is_empty() {
+                    id.to_string()
+                } else {
+                    name.to_string()
+                },
+                category: model_category(id, name).to_string(),
+            });
+        }
+        if !models.is_empty() {
+            return Some(models);
+        }
+    }
+    None
+}
+
+/// Retrieve supported models for Antigravity, auto-detected from the CLI.
+pub fn get_available_models_internal() -> Vec<ModelInfo> {
+    if let Ok(cache) = MODEL_CACHE.lock() {
+        if let Some((at, models)) = cache.as_ref() {
+            if at.elapsed() < MODEL_CACHE_TTL {
+                return models.clone();
+            }
+        }
+    }
+
+    let models = detect_models_from_cli().unwrap_or_else(fallback_models);
+    if let Ok(mut cache) = MODEL_CACHE.lock() {
+        *cache = Some((Instant::now(), models.clone()));
+    }
+    models
 }
 
 /// Query conversation history from local SQLite database
@@ -592,8 +718,11 @@ pub async fn send_chat_internal(
 // -----------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn agent_get_available_models() -> Vec<ModelInfo> {
-    get_available_models_internal()
+pub async fn agent_get_available_models() -> Vec<ModelInfo> {
+    // `agy models` can take a moment on first call; keep it off the UI thread.
+    tauri::async_runtime::spawn_blocking(get_available_models_internal)
+        .await
+        .unwrap_or_else(|_| fallback_models())
 }
 
 #[tauri::command]

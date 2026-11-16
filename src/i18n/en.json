@@ -817,6 +817,7 @@
   "Antigravity (AGY) Agent": "Antigravity (AGY) Agent",
   "Antigravity tidak terbuka atau belum terhubung": "Antigravity is not open or not connected",
   "Antigravity tidak terbuka atau belum terhubung.": "Antigravity is not open or not connected.",
+  "Antigravity tidak terhubung": "Antigravity is not connected",
   "Belum terhubung ke Antigravity. Pasang hooks agar notch dapat mendeteksi aktivitas coding.": "Not connected to Antigravity. Install hooks so the notch can detect coding activity.",
   "Belum terhubung ke OpenCode. Pasang plugin agar notch dapat mendeteksi aktivitas OpenCode.": "Not connected to OpenCode. Install the plugin so the notch can detect OpenCode activity.",
   "Buat sesi baru": "Create new session",
